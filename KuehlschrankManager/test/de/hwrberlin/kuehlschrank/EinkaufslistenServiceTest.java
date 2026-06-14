@@ -37,7 +37,8 @@ public class EinkaufslistenServiceTest {
     }
     @Test public void testKeineDoppelten() {
         Einkaufslisteneintrag e = new Einkaufslisteneintrag("Butter", 1, "Stueck", Produktkategorie.MILCHPRODUKTE);
-        service.eintragHinzufuegen(e); service.eintragHinzufuegen(e);
+        service.eintragHinzufuegen(e); 
+        service.eintragHinzufuegen(e);
         assertEquals(1, service.getEintraege().size());
     }
     @Test public void testManuellHinzufuegen() {

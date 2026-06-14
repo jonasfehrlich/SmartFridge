@@ -115,10 +115,8 @@ public class RezeptAnsicht {
 
         for (String z : fehlend) {
             einkaufslistenService.eintragHinzufuegen(
-                new de.hwrberlin.kuehlschrank.model.Einkaufslisteneintrag(
-                    z, 1, "Stueck", de.hwrberlin.kuehlschrank.model.Produktkategorie.SONSTIGES
-                )
-            );
+                new de.hwrberlin.kuehlschrank.model.Einkaufslisteneintrag
+                (z, 1, "Stueck", de.hwrberlin.kuehlschrank.model.Produktkategorie.SONSTIGES));
         }
 
         JOptionPane.showMessageDialog(null, fehlend.size() + " Zutaten hinzugefuegt.");

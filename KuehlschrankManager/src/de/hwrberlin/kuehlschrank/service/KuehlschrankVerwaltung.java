@@ -12,7 +12,7 @@ import java.util.*;
  */
 public class KuehlschrankVerwaltung implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static final String DATEI = "data/kuehlschrank.dat";
+    private static final String DATEI = "data/kuehlschrank.json";
 
     private HashMap<String, Produkt> produkte = new HashMap<>();
     private HashSet<Produktkategorie> vorhandeneKategorien = new HashSet<>();
@@ -74,7 +74,7 @@ public class KuehlschrankVerwaltung implements Serializable {
     public void speichern() { Datenspeicher.speichern(this, DATEI); }
 
     public static KuehlschrankVerwaltung laden() {
-        KuehlschrankVerwaltung v = Datenspeicher.laden(DATEI);
+        KuehlschrankVerwaltung v = Datenspeicher.laden(DATEI,KuehlschrankVerwaltung.class);
         return v != null ? v : new KuehlschrankVerwaltung();
     }
 }

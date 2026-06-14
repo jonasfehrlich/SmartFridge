@@ -29,7 +29,10 @@ public class RezeptService {
     /** Welche Zutaten eines Rezepts fehlen im Kuehlschrank? */
     public List<String> fehlendeZutaten(Rezept rezept, KuehlschrankVerwaltung v) {
         List<String> fehlend = new ArrayList<>();
-        for (String z : rezept.getZutaten()) if (v.produktSuchen(z) == null) fehlend.add(z);
+        for (String z : rezept.getZutaten()) { 
+        	if (v.produktSuchen(z) == null) 
+        		{fehlend.add(z);}
+        	}
         return fehlend;
     }
 
