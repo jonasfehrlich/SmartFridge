@@ -9,6 +9,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
+/**
+ * Tab "Rezepte": schlaegt Rezepte vor und uebernimmt fehlende Zutaten in die
+ * Einkaufsliste. Vorlesung 2.3.1 (Exkurs): Swing (JList, JTextArea, Listener).
+ * Anzeige-Bug in RezeptAnsicht behoben („20 Min. min" → „20 Min.")
+ */
 public class RezeptAnsicht {
     private final KuehlschrankVerwaltung verwaltung;
     private final RezeptService rezeptService;
@@ -68,7 +73,8 @@ public class RezeptAnsicht {
         model.clear();
 
         for (Rezept r : aktuelle) {
-            model.addElement(r.getName() + " (" + r.getZubereitungszeit() + " min)");
+            // getZubereitungszeit() enthaelt bereits die Einheit (z.B. "20 Min.").
+            model.addElement(r.getName() + " (" + r.getZubereitungszeit() + ")");
         }
 
         if (aktuelle.isEmpty()) {
