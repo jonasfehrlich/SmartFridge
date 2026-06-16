@@ -72,7 +72,7 @@ public class ProduktAnsicht {
         if (model == null) return;
         model.setRowCount(0);
         for (Produkt p : verwaltung.alleProdukte()) {
-            String status = p.istAbgelaufen() ? "ABGELAUFEN" : (p.laeufBaldAb(3) ? "Bald abgelaufen" : (p.brauchtnachkauf() ? "Nachkauf noetig" : "OK"));
+            String status = p.istAbgelaufen() ? "ABGELAUFEN" : (p.laeuftBaldAb(3) ? "Bald abgelaufen" : (p.brauchtNachkauf() ? "Nachkauf noetig" : "OK"));
             model.addRow(new Object[]{p.getName(), p.getKategorie(), p.getMenge() + " " + p.getEinheit(), p.getAblaufdatum(), status});
         }
     }
