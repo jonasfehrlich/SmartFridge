@@ -16,22 +16,22 @@ public class ProduktTest {
     }
     @Test public void testLaeufBaldAb_Wahr() {
         Produkt p = new Produkt("Test", Produktkategorie.LEBENSMITTEL, 1, "Stueck", LocalDate.now().plusDays(2), 0);
-        assertTrue(p.laeufBaldAb(3));
+        assertTrue(p.laeuftBaldAb(3));
     }
     @Test public void testLaeufBaldAb_Falsch() {
         Produkt p = new Produkt("Test", Produktkategorie.LEBENSMITTEL, 1, "Stueck", LocalDate.now().plusDays(10), 0);
-        assertFalse(p.laeufBaldAb(3));
+        assertFalse(p.laeuftBaldAb(3));
     }
     @Test public void testBrauchtNachkauf() {
         Produkt p = new Produkt("Test", Produktkategorie.GETRAENKE, 0.5, "Liter", null, 1.0);
-        assertTrue(p.brauchtnachkauf());
+        assertTrue(p.brauchtNachkauf());
     }
     @Test public void testKeinNachkauf() {
         Produkt p = new Produkt("Test", Produktkategorie.GETRAENKE, 2.0, "Liter", null, 1.0);
-        assertFalse(p.brauchtnachkauf());
+        assertFalse(p.brauchtNachkauf());
     }
     @Test public void testKeinAblaufdatum_KeinAbsturz() {
         Produkt p = new Produkt("Salz", Produktkategorie.LEBENSMITTEL, 500, "Gramm", null, 0);
-        assertFalse(p.istAbgelaufen()); assertFalse(p.laeufBaldAb(30));
+        assertFalse(p.istAbgelaufen()); assertFalse(p.laeuftBaldAb(30));
     }
 }

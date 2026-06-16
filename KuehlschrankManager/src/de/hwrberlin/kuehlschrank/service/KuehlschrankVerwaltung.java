@@ -46,7 +46,7 @@ public class KuehlschrankVerwaltung implements Serializable {
     public ArrayList<Produkt> baldAblaufendeProdukte(int tage) {
         ArrayList<Produkt> liste = new ArrayList<>();
         for (Produkt p : produkte.values())
-            if (p.laeufBaldAb(tage)) liste.add(p);
+            if (p.laeuftBaldAb(tage)) liste.add(p);
         Collections.sort(liste);
         return liste;
     }
@@ -61,7 +61,7 @@ public class KuehlschrankVerwaltung implements Serializable {
     public ArrayList<Produkt> produkteMitNachkaufbedarf() {
         ArrayList<Produkt> liste = new ArrayList<>();
         for (Produkt p : produkte.values())
-            if (p.brauchtnachkauf()) liste.add(p);
+            if (p.brauchtNachkauf()) liste.add(p);
         return liste;
     }
 
