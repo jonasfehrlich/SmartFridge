@@ -7,19 +7,20 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Hilfsklasse fuer wiederverwendbare moderne UI-Komponenten.
+ * Reusable factory methods for modern Swing UI components.
+ * All colours reference the central constants defined in {@link SmartFridgeApp}.
  */
 public class UiHelper {
 
-    /** Erstellt einen modernen Akzent-Button (gefuellt). */
+    /** Creates a filled accent button. */
     public static JButton accentButton(String text) {
         JButton btn = new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color bg = getModel().isPressed()  ? KuehlschrankApp.ACCENT.darker()
-                         : getModel().isRollover() ? KuehlschrankApp.ACCENT.brighter()
-                         : KuehlschrankApp.ACCENT;
+                Color bg = getModel().isPressed()  ? SmartFridgeApp.ACCENT.darker()
+                         : getModel().isRollover() ? SmartFridgeApp.ACCENT.brighter()
+                         : SmartFridgeApp.ACCENT;
                 g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 g2.dispose();
@@ -36,17 +37,17 @@ public class UiHelper {
         return btn;
     }
 
-    /** Erstellt einen modernen Ghost-Button (nur Rahmen). */
+    /** Creates an outlined ghost button. */
     public static JButton ghostButton(String text) {
         JButton btn = new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 if (getModel().isPressed() || getModel().isRollover()) {
-                    g2.setColor(KuehlschrankApp.BG_HOVER);
+                    g2.setColor(SmartFridgeApp.BG_HOVER);
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 }
-                g2.setColor(KuehlschrankApp.BORDER);
+                g2.setColor(SmartFridgeApp.BORDER);
                 g2.setStroke(new BasicStroke(1.2f));
                 g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 10, 10);
                 g2.dispose();
@@ -54,7 +55,7 @@ public class UiHelper {
             }
         };
         btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        btn.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        btn.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
@@ -63,15 +64,15 @@ public class UiHelper {
         return btn;
     }
 
-    /** Erstellt einen Danger-Button (rot, fuer Loeschen etc.). */
+    /** Creates a red danger button (for delete actions etc.). */
     public static JButton dangerButton(String text) {
         JButton btn = new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color bg = getModel().isPressed()  ? KuehlschrankApp.ACCENT_DANGER.darker()
-                         : getModel().isRollover() ? KuehlschrankApp.ACCENT_DANGER.brighter()
-                         : KuehlschrankApp.ACCENT_DANGER;
+                Color bg = getModel().isPressed()  ? SmartFridgeApp.ACCENT_DANGER.darker()
+                         : getModel().isRollover() ? SmartFridgeApp.ACCENT_DANGER.brighter()
+                         : SmartFridgeApp.ACCENT_DANGER;
                 g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 g2.dispose();
@@ -88,15 +89,15 @@ public class UiHelper {
         return btn;
     }
 
-    /** Erstellt ein modernes Karten-Panel mit abgerundeten Ecken. */
+    /** Creates a modern rounded card panel. */
     public static JPanel card() {
         JPanel card = new JPanel() {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(KuehlschrankApp.BG_CARD);
+                g2.setColor(SmartFridgeApp.BG_CARD);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
-                g2.setColor(KuehlschrankApp.BORDER);
+                g2.setColor(SmartFridgeApp.BORDER);
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 14, 14);
                 g2.dispose();
@@ -107,38 +108,38 @@ public class UiHelper {
         return card;
     }
 
-    /** Erstellt ein modernes JTextField mit dunklem Hintergrund. */
+    /** Creates a modern dark-themed JTextField. */
     public static JTextField textField(String placeholder) {
         JTextField tf = new JTextField();
-        tf.setBackground(KuehlschrankApp.BG_CARD);
-        tf.setForeground(KuehlschrankApp.TEXT_PRIMARY);
-        tf.setCaretColor(KuehlschrankApp.ACCENT);
+        tf.setBackground(SmartFridgeApp.BG_CARD);
+        tf.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        tf.setCaretColor(SmartFridgeApp.ACCENT);
         tf.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         tf.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1, true),
+            BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1, true),
             new EmptyBorder(7, 12, 7, 12)));
         return tf;
     }
 
-    /** Erstellt ein modernes Abschnitts-Label (Sektions-Ueberschrift). */
+    /** Creates a bold section heading label. */
     public static JLabel sectionLabel(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lbl.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        lbl.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         lbl.setBorder(new EmptyBorder(0, 0, 8, 0));
         return lbl;
     }
 
-    /** Erstellt eine moderne JScrollPane ohne sichtbare Raender. */
+    /** Creates a borderless JScrollPane with a custom dark scrollbar. */
     public static JScrollPane scrollPane(Component c) {
         JScrollPane sp = new JScrollPane(c);
-        sp.setBackground(KuehlschrankApp.BG_DARK);
-        sp.getViewport().setBackground(KuehlschrankApp.BG_DARK);
-        sp.setBorder(BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1));
+        sp.setBackground(SmartFridgeApp.BG_DARK);
+        sp.getViewport().setBackground(SmartFridgeApp.BG_DARK);
+        sp.setBorder(BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1));
         sp.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
             @Override protected void configureScrollBarColors() {
                 this.thumbColor = new Color(70, 75, 95);
-                this.trackColor = KuehlschrankApp.BG_DARK;
+                this.trackColor = SmartFridgeApp.BG_DARK;
             }
             @Override protected JButton createDecreaseButton(int orientation) {
                 return createZeroButton();
@@ -155,7 +156,7 @@ public class UiHelper {
         return sp;
     }
 
-    /** Erstellt ein Badge-Label (farbige Pill). */
+    /** Creates a coloured pill-shaped badge label. */
     public static JLabel badge(String text, Color color) {
         JLabel lbl = new JLabel(text) {
             @Override protected void paintComponent(Graphics g) {
