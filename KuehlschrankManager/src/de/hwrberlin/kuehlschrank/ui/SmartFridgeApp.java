@@ -1,5 +1,8 @@
 package de.hwrberlin.kuehlschrank.ui;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLaf;
+
 import de.hwrberlin.kuehlschrank.service.ShoppingListService;
 import de.hwrberlin.kuehlschrank.service.FridgeManager;
 import de.hwrberlin.kuehlschrank.service.RecipeService;
@@ -8,98 +11,121 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Entry point of the Swing application.
- * Modern UI without external libraries – pure Swing implementation.
+ * Entry point of the SmartFridge application.
+ * Uses FlatLaf Dark theme for a modern, professional look.
+ * To use FlatLaf, add flatlaf-3.4.jar to your project libraries:
+ *   IntelliJ: File → Project Structure → Libraries → + → flatlaf-3.4.jar
  */
 public class SmartFridgeApp {
 
-    public static FridgeManager fridgeManager;
+    public static FridgeManager       fridgeManager;
     public static ShoppingListService shoppingListService;
-    public static RecipeService recipeService;
+    public static RecipeService       recipeService;
 
-    // Modern colour scheme (dark-mode inspired, but bright and clean)
-    public static final Color BG_DARK        = new Color(24, 26, 32);
-    public static final Color BG_CARD        = new Color(34, 37, 46);
-    public static final Color BG_HOVER       = new Color(44, 48, 60);
-    public static final Color ACCENT         = new Color(99, 179, 122);   // Green
-    public static final Color ACCENT_WARN    = new Color(255, 183, 77);   // Orange
-    public static final Color ACCENT_DANGER  = new Color(229, 92, 92);    // Red
-    public static final Color ACCENT_BLUE    = new Color(100, 160, 230);  // Blue
-    public static final Color TEXT_PRIMARY   = new Color(230, 232, 240);
-    public static final Color TEXT_SECONDARY = new Color(140, 145, 165);
-    public static final Color BORDER         = new Color(55, 60, 75);
+    // ── Colour palette (FlatLaf dark, green accent) ──────────────────────────
+    public static final Color BG_DARK        = new Color(0x1E, 0x1F, 0x22);   // FlatLaf editor bg
+    public static final Color BG_CARD        = new Color(0x2B, 0x2D, 0x30);   // FlatLaf tool window
+    public static final Color BG_HOVER       = new Color(0x35, 0x38, 0x3D);   // hover surface
+    public static final Color ACCENT         = new Color(0x4C, 0xAF, 0x7A);   // green – primary
+    public static final Color ACCENT_LIGHT   = new Color(0x6F, 0xC9, 0x97);   // green – light
+    public static final Color ACCENT_WARN    = new Color(0xFF, 0xB7, 0x4D);   // amber
+    public static final Color ACCENT_DANGER  = new Color(0xE5, 0x5C, 0x5C);   // red
+    public static final Color ACCENT_BLUE    = new Color(0x6A, 0xA8, 0xE8);   // blue
+    public static final Color TEXT_PRIMARY   = new Color(0xD4, 0xD4, 0xD4);   // main text
+    public static final Color TEXT_SECONDARY = new Color(0x8A, 0x8A, 0x8A);   // muted text
+    public static final Color BORDER         = new Color(0x43, 0x45, 0x4A);   // subtle border
 
+    // ── FlatLaf property tweaks ───────────────────────────────────────────────
     public static void applyGlobalStyle() {
-        try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (Exception ignored) {
-            try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
-            catch (Exception e2) { /* fallback */ }
-        }
+        // ── FlatLaf dark theme ────────────────────────────────────────────────
+        FlatDarkLaf.setup();
 
-        UIManager.put("Panel.background",             BG_DARK);
-        UIManager.put("OptionPane.background",         BG_CARD);
-        UIManager.put("OptionPane.messageForeground",  TEXT_PRIMARY);
-        UIManager.put("Label.foreground",              TEXT_PRIMARY);
-        UIManager.put("Label.background",              BG_DARK);
-        UIManager.put("TextField.background",          BG_CARD);
-        UIManager.put("TextField.foreground",          TEXT_PRIMARY);
-        UIManager.put("TextField.caretForeground",     ACCENT);
-        UIManager.put("TextField.border",
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER, 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        UIManager.put("TextArea.background",           BG_CARD);
-        UIManager.put("TextArea.foreground",           TEXT_PRIMARY);
-        UIManager.put("TextArea.caretForeground",      ACCENT);
-        UIManager.put("ComboBox.background",           BG_CARD);
-        UIManager.put("ComboBox.foreground",           TEXT_PRIMARY);
-        UIManager.put("ComboBox.selectionBackground",  BG_HOVER);
-        UIManager.put("ComboBox.selectionForeground",  ACCENT);
-        UIManager.put("List.background",               BG_CARD);
-        UIManager.put("List.foreground",               TEXT_PRIMARY);
-        UIManager.put("List.selectionBackground",      new Color(99, 179, 122, 60));
-        UIManager.put("List.selectionForeground",      ACCENT);
-        UIManager.put("Table.background",              BG_CARD);
-        UIManager.put("Table.foreground",              TEXT_PRIMARY);
-        UIManager.put("Table.selectionBackground",     new Color(99, 179, 122, 60));
-        UIManager.put("Table.selectionForeground",     ACCENT);
-        UIManager.put("Table.gridColor",               BORDER);
-        UIManager.put("TableHeader.background",        BG_DARK);
-        UIManager.put("TableHeader.foreground",        TEXT_SECONDARY);
-        UIManager.put("ScrollPane.background",         BG_DARK);
-        UIManager.put("ScrollBar.background",          BG_DARK);
-        UIManager.put("ScrollBar.thumb",               BORDER);
-        UIManager.put("TabbedPane.background",         BG_DARK);
-        UIManager.put("TabbedPane.foreground",         TEXT_PRIMARY);
-        UIManager.put("TabbedPane.selected",           BG_CARD);
-        UIManager.put("TabbedPane.contentBorderInsets", new Insets(0, 0, 0, 0));
+        // Override key FlatLaf colours to match our green accent
+        UIManager.put("Component.focusColor",           ACCENT);
+        UIManager.put("Component.focusedBorderColor",   ACCENT);
+        UIManager.put("Button.default.background",      ACCENT);
+        UIManager.put("Button.default.foreground",      Color.WHITE);
+        UIManager.put("Button.default.hoverBackground", ACCENT_LIGHT);
+        UIManager.put("CheckBox.icon.selectedColor",    ACCENT);
+        UIManager.put("ToggleButton.selectedBackground",new Color(0x4C, 0xAF, 0x7A, 80));
+        UIManager.put("ProgressBar.foreground",         ACCENT);
+        UIManager.put("Slider.thumbColor",              ACCENT);
+        UIManager.put("TabbedPane.underlineColor",      ACCENT);
+        UIManager.put("TabbedPane.hoverColor",          BG_HOVER);
+        UIManager.put("TabbedPane.focusColor",          BG_HOVER);
+        UIManager.put("List.selectionBackground",       new Color(0x4C, 0xAF, 0x7A, 50));
+        UIManager.put("Table.selectionBackground",      new Color(0x4C, 0xAF, 0x7A, 50));
+        UIManager.put("TextField.caretForeground",      ACCENT);
+        UIManager.put("TextArea.caretForeground",       ACCENT);
+
+        // Larger, rounder default border-radius for buttons / inputs
+        UIManager.put("Button.arc",          999);   // pill buttons
+        UIManager.put("Component.arc",        8);
+        UIManager.put("TextComponent.arc",    8);
+        UIManager.put("ScrollBar.showButtons", false);
+        UIManager.put("ScrollBar.thumbArc",    999);
+        UIManager.put("ScrollBar.width",        8);
+
+        // Fonts – use a crisp, modern sans-serif
+        Font baseFont = new Font("Segoe UI", Font.PLAIN, 13);
+        UIManager.put("defaultFont", baseFont);
     }
 
+    // ── Application entry point ────────────────────────────────────────────────
     public static void main(String[] args) {
+        // Must be called BEFORE any Swing component is created
         applyGlobalStyle();
+
         SwingUtilities.invokeLater(() -> {
-            fridgeManager = FridgeManager.load();
+            fridgeManager       = FridgeManager.load();
             shoppingListService = ShoppingListService.load();
-            recipeService = new RecipeService(false);
+
+            // Online mode: fetch recipes from the Spoonacular API.
+            // Falls back to local recipes automatically if the network is unavailable.
+            recipeService = new RecipeService(true);
 
             if (fridgeManager.getProductCount() == 0) {
                 SampleDataLoader.load(fridgeManager);
             }
 
-            JFrame frame = new JFrame("SmartFridge");
+            JFrame frame = new JFrame("SmartFridge 🍳");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.getContentPane().setBackground(SmartFridgeApp.BG_DARK);
-            frame.setContentPane(new MainWindow(fridgeManager, shoppingListService, recipeService).createPanel());
-            frame.setSize(1100, 750);
-            frame.setMinimumSize(new Dimension(900, 600));
+
+            // App icon (green fridge emoji rendered as icon)
+            frame.setIconImage(createAppIcon());
+
+            frame.setContentPane(
+                new MainWindow(fridgeManager, shoppingListService, recipeService).createPanel());
+            frame.setSize(1200, 820);
+            frame.setMinimumSize(new Dimension(960, 640));
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
+    }
+
+    /** Creates a simple coloured square as the window icon (no image file needed). */
+    private static Image createAppIcon() {
+        int size = 64;
+        java.awt.image.BufferedImage img =
+                new java.awt.image.BufferedImage(size, size,
+                        java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        // Background circle
+        g.setColor(ACCENT);
+        g.fillRoundRect(0, 0, size, size, 18, 18);
+        // Fridge rectangle
+        g.setColor(Color.WHITE);
+        g.fillRoundRect(14, 10, 36, 46, 8, 8);
+        // Freezer divider
+        g.setColor(ACCENT_LIGHT);
+        g.fillRect(14, 26, 36, 3);
+        // Handle
+        g.setColor(new Color(0x2B, 0x2D, 0x30));
+        g.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(28, 14, 28, 22);
+        g.drawLine(28, 30, 28, 38);
+        g.dispose();
+        return img;
     }
 }
