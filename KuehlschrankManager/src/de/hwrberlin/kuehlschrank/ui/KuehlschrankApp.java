@@ -18,19 +18,25 @@ public class KuehlschrankApp {
     public static RezeptService rezeptService;
 
     public static void main(String[] args) {
+        // Modernes Dark-Theme vor allen Swing-Aufrufen setzen
+        Theme.apply();
+
         SwingUtilities.invokeLater(() -> {
-            verwaltung = KuehlschrankVerwaltung.laden();
+            verwaltung          = KuehlschrankVerwaltung.laden();
             einkaufslistenService = EinkaufslistenService.laden();
-            rezeptService = new RezeptService(false);
+            rezeptService       = new RezeptService(false);
 
             if (verwaltung.anzahlProdukte() == 0) {
                 BeispieldatenLader.laden(verwaltung);
             }
 
-            JFrame frame = new JFrame("Kuehlschrank-Manager – Swing");
+            JFrame frame = new JFrame("SmartFridge – Kuehlschrank-Manager");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setContentPane(new HauptFenster(verwaltung, einkaufslistenService, rezeptService).createPanel());
-            frame.setSize(1000, 700);
+            frame.getContentPane().setBackground(Theme.BG_BASE);
+            frame.setContentPane(
+                new HauptFenster(verwaltung, einkaufslistenService, rezeptService).createPanel());
+            frame.setSize(1100, 720);
+            frame.setMinimumSize(new Dimension(900, 600));
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });

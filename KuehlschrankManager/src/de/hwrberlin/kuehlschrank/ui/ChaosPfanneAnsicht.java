@@ -14,8 +14,7 @@ import java.util.List;
 
 /**
  * Tab "Chaos-Pfanne": erkennt bald ablaufende Produkte und schlaegt
- * passende Rezepte vor. Ablaufende Zutaten werden besonders
- * gekennzeichnet; zusaetzlich benoetigte Artikel werden angezeigt.
+ * passende Rezepte vor. Zutaten werden farbig gekennzeichnet.
  */
 public class ChaosPfanneAnsicht {
     private static final int BALD_ABLAUFEND_TAGE = 5;
@@ -24,7 +23,8 @@ public class ChaosPfanneAnsicht {
     private final RezeptService rezeptService;
     private final EinkaufslistenAnsicht einkaufsAnsicht;
 
-    private JTextArea ausgabe;
+    private JPanel ergebnisPanel;
+    private JScrollPane scroll;
 
     public ChaosPfanneAnsicht(KuehlschrankVerwaltung v, RezeptService r,
                                EinkaufslistenAnsicht ea) {
@@ -34,84 +34,183 @@ public class ChaosPfanneAnsicht {
     }
 
     public JPanel createPanel() {
-        JPanel p = new JPanel(new BorderLayout(8, 8));
-        p.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(Theme.BG_SURFACE);
 
-        ausgabe = new JTextArea();
-        ausgabe.setEditable(false);
-        ausgabe.setLineWrap(true);
-        ausgabe.setWrapStyleWord(true);
-        ausgabe.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        // --- Hero-Banner ---
+        JPanel hero = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setPaint(new GradientPaint(
+                    0, 0, Theme.CHAOS_BG,
+                    getWidth(), getHeight(), new Color(0x14, 0x0A, 0x28)));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        hero.setOpaque(false);
+        hero.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER),
+            BorderFactory.createEmptyBorder(16, 20, 16, 20)));
 
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton btn = new JButton("Chaos-Pfanne erstellen");
+        JLabel heroTitle = new JLabel("\uD83C\uDF73  Chaos-Pfanne");
+        heroTitle.setFont(Theme.FONT_TITLE);
+        heroTitle.setForeground(Theme.CHAOS);
+
+        JLabel heroSub = new JLabel(
+            "Nutze bald ablaufende Produkte fuer ein spontanes Rezept.");
+        heroSub.setFont(Theme.FONT_BODY);
+        heroSub.setForeground(Theme.TEXT_MUTED);
+
+        JButton btn = Theme.primaryButton("\uD83C\uDF73  Jetzt erstellen") {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color bg = getModel().isRollover() ? Theme.CHAOS.brighter() : Theme.CHAOS;
+                g2.setColor(bg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        JPanel heroText = new JPanel(new GridLayout(2, 1, 0, 4));
+        heroText.setOpaque(false);
+        heroText.add(heroTitle);
+        heroText.add(heroSub);
+        hero.add(heroText, BorderLayout.CENTER);
+        hero.add(btn,      BorderLayout.EAST);
+
+        // --- Ergebnis-Scrollbereich ---
+        ergebnisPanel = new JPanel();
+        ergebnisPanel.setLayout(new BoxLayout(ergebnisPanel, BoxLayout.Y_AXIS));
+        ergebnisPanel.setBackground(Theme.BG_SURFACE);
+        ergebnisPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+
+        JLabel hint = new JLabel(
+            "Klicke auf \"Jetzt erstellen\", um Rezeptvorschlaege zu sehen.");
+        hint.setFont(Theme.FONT_BODY);
+        hint.setForeground(Theme.TEXT_MUTED);
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ergebnisPanel.add(hint);
+
+        scroll = Theme.scrollPane(ergebnisPanel);
+
         btn.addActionListener(e -> erstelleChaosPfanne());
-        top.add(btn);
 
-        p.add(top, BorderLayout.NORTH);
-        p.add(new JScrollPane(ausgabe), BorderLayout.CENTER);
-
-        ausgabe.setText("Klicke auf \"Chaos-Pfanne erstellen\", um Rezeptvorschlaege\n"
-                + "fuer bald ablaufende Produkte zu erhalten.");
-        return p;
+        root.add(hero,   BorderLayout.NORTH);
+        root.add(scroll, BorderLayout.CENTER);
+        return root;
     }
 
     private void erstelleChaosPfanne() {
-        List<Produkt> baldAblaufend = verwaltung.baldAblaufendeProdukte(BALD_ABLAUFEND_TAGE);
+        ergebnisPanel.removeAll();
+
+        List<Produkt> baldAblaufend =
+            verwaltung.baldAblaufendeProdukte(BALD_ABLAUFEND_TAGE);
 
         if (baldAblaufend.isEmpty()) {
-            ausgabe.setText("Alle Produkte sind noch gut haltbar – keine Chaos-Pfanne noetig!");
+            JLabel ok = new JLabel(
+                "\u2705  Alle Produkte sind noch gut haltbar – kein Chaos noetig!");
+            ok.setFont(Theme.FONT_BODY);
+            ok.setForeground(Theme.SUCCESS);
+            ok.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ergebnisPanel.add(ok);
+            ergebnisPanel.revalidate();
+            ergebnisPanel.repaint();
             return;
         }
 
-        List<String> zutatenNamen = new ArrayList<>();
-        for (Produkt p : baldAblaufend) zutatenNamen.add(p.getName());
-        for (Produkt p : verwaltung.alleProdukte())
-            if (!zutatenNamen.contains(p.getName())) zutatenNamen.add(p.getName());
-
-        List<Rezept> vorschlaege = rezeptService.erstelleChaosPfanne(verwaltung);
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== CHAOS-PFANNE ===").append("\n");
-        sb.append("Bald ablaufende Produkte (in ").append(BALD_ABLAUFEND_TAGE)
-          .append(" Tagen):" ).append("\n");
+        // --- Ablaufende Produkte ---
+        JLabel secTitle = new JLabel("Bald ablaufende Produkte:");
+        secTitle.setFont(Theme.FONT_HEADING);
+        secTitle.setForeground(Theme.WARNING);
+        secTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ergebnisPanel.add(secTitle);
+        ergebnisPanel.add(Box.createVerticalStrut(8));
 
         LocalDate heute = LocalDate.now();
+        JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        badgeRow.setOpaque(false);
+        badgeRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         for (Produkt p : baldAblaufend) {
             long tage = ChronoUnit.DAYS.between(heute, p.getAblaufdatum());
-            sb.append("  [!] ").append(p.getName());
-            if (tage == 0) sb.append(" -- HEUTE noch haltbar!");
-            else sb.append(" -- noch ").append(tage).append(" Tag(e)");
-            sb.append("\n");
+            String txt = p.getName() + (tage == 0 ? " (heute!)" : " (" + tage + "d)");
+            badgeRow.add(Theme.badge(txt, Theme.WARNING, Theme.WARNING_BG));
         }
+        ergebnisPanel.add(badgeRow);
+        ergebnisPanel.add(Box.createVerticalStrut(20));
 
-        sb.append("\n");
+        // --- Rezeptvorschlaege ---
+        List<String> zutatenNamen = new ArrayList<>();
+        for (Produkt p : baldAblaufend) zutatenNamen.add(p.getName());
+
+        List<Rezept> vorschlaege = rezeptService.rezepteVorschlagen(verwaltung);
 
         if (vorschlaege.isEmpty()) {
-            sb.append("Keine passenden Rezepte gefunden.\n");
-            sb.append("Tipp: Einfach alles zusammen in die Pfanne und anbraten!\n");
+            JLabel noRez = new JLabel(
+                "Keine passenden Rezepte. Tipp: Einfach alles zusammen anbraten!");
+            noRez.setFont(Theme.FONT_BODY);
+            noRez.setForeground(Theme.TEXT_MUTED);
+            noRez.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ergebnisPanel.add(noRez);
         } else {
-            sb.append("Rezeptvorschlaege:\n");
+            JLabel rezTitle = new JLabel("Rezeptvorschlaege:");
+            rezTitle.setFont(Theme.FONT_HEADING);
+            rezTitle.setForeground(Theme.CHAOS);
+            rezTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ergebnisPanel.add(rezTitle);
+            ergebnisPanel.add(Box.createVerticalStrut(10));
+
             for (Rezept r : vorschlaege) {
-                sb.append("\n  ").append(r.getName())
-                  .append(" (").append(r.getZubereitungszeit()).append(")\n");
-                sb.append("  ").append(r.getBeschreibung()).append("\n");
-                sb.append("  Zutaten:\n");
-                for (String z : r.getZutaten()) {
-                    boolean ablaufend = zutatenNamen.subList(0, baldAblaufend.size())
-                                                    .stream()
-                                                    .anyMatch(n -> n.equalsIgnoreCase(z));
-                    boolean vorhanden = verwaltung.produktSuchen(z) != null;
-                    sb.append("    - ").append(z);
-                    if (ablaufend) sb.append(" [bald ablaufend!]");
-                    else if (vorhanden) sb.append(" (vorhanden)");
-                    else sb.append(" [+ einkaufen empfohlen]");
-                    sb.append("\n");
-                }
+                ergebnisPanel.add(rezeptKarte(r, zutatenNamen));
+                ergebnisPanel.add(Box.createVerticalStrut(10));
             }
         }
 
-        ausgabe.setText(sb.toString());
-        ausgabe.setCaretPosition(0);
+        ergebnisPanel.revalidate();
+        ergebnisPanel.repaint();
+    }
+
+    private JPanel rezeptKarte(Rezept r, List<String> ablaufend) {
+        JPanel card = new JPanel(new BorderLayout(0, 10));
+        card.setBackground(Theme.BG_CARD);
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Theme.CHAOS.darker().darker(), 1),
+            BorderFactory.createEmptyBorder(14, 16, 14, 16)));
+
+        // Titel-Zeile
+        JPanel titleRow = new JPanel(new BorderLayout(8, 0));
+        titleRow.setOpaque(false);
+        JLabel name = new JLabel(r.getName());
+        name.setFont(Theme.FONT_HEADING);
+        name.setForeground(Theme.TEXT_PRIMARY);
+        JLabel zeit = Theme.badge(r.getZubereitungszeit(), Theme.CHAOS, Theme.CHAOS_BG);
+        titleRow.add(name, BorderLayout.WEST);
+        titleRow.add(zeit, BorderLayout.EAST);
+        card.add(titleRow, BorderLayout.NORTH);
+
+        // Beschreibung
+        JLabel desc = new JLabel("<html>" + r.getBeschreibung() + "</html>");
+        desc.setFont(Theme.FONT_BODY);
+        desc.setForeground(Theme.TEXT_MUTED);
+        card.add(desc, BorderLayout.CENTER);
+
+        // Zutaten mit Badges
+        JPanel zutatenRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        zutatenRow.setOpaque(false);
+        for (String z : r.getZutaten()) {
+            boolean isBald = ablaufend.stream().anyMatch(n -> n.equalsIgnoreCase(z));
+            boolean da     = verwaltung.produktSuchen(z) != null;
+            JLabel badge;
+            if (isBald)       badge = Theme.badge("\u26A0 " + z, Theme.WARNING, Theme.WARNING_BG);
+            else if (da)      badge = Theme.badge("\u2713 " + z, Theme.SUCCESS, Theme.SUCCESS_BG);
+            else              badge = Theme.badge("+ " + z, Theme.ACCENT, new Color(0x14, 0x25, 0x40));
+            zutatenRow.add(badge);
+        }
+        card.add(zutatenRow, BorderLayout.SOUTH);
+        return card;
     }
 }
