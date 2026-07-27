@@ -6,12 +6,13 @@ import de.hwrberlin.kuehlschrank.service.KuehlschrankVerwaltung;
 import de.hwrberlin.kuehlschrank.service.RezeptService;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.List;
 
 /**
- * Tab "Rezepte": schlaegt Rezepte vor und uebernimmt fehlende Zutaten in die
- * Einkaufsliste. Bug-Fix: Einkaufsliste wird nach dem Hinzufuegen sofort aktualisiert.
+ * Tab "Rezepte": schlaegt Rezepte vor und uebertraegt fehlende Zutaten
+ * in die Einkaufsliste. Bug-Fix: Einkaufsliste aktualisiert sich sofort.
  */
 public class RezeptAnsicht {
     private final KuehlschrankVerwaltung verwaltung;
@@ -19,8 +20,8 @@ public class RezeptAnsicht {
     private final EinkaufslistenService einkaufslistenService;
     private final EinkaufslistenAnsicht einkaufsAnsicht;
 
-    private DefaultListModel<Rezept> listModel;
-    private JList<Rezept> list;
+    private DefaultListModel<String> model;
+    private JList<String> list;
     private JTextArea details;
     private List<Rezept> aktuelle;
 
@@ -33,87 +34,92 @@ public class RezeptAnsicht {
     }
 
     public JPanel createPanel() {
-        JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(Theme.BG_SURFACE);
+        JPanel root = new JPanel(new BorderLayout(0, 12));
+        root.setBackground(KuehlschrankApp.BG_DARK);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // --- Toolbar ---
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
-        toolbar.setBackground(Theme.BG_SURFACE);
-        toolbar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
+        // --- Linke Rezeptliste ---
+        model = new DefaultListModel<>();
+        list  = new JList<>(model);
+        list.setBackground(KuehlschrankApp.BG_CARD);
+        list.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        list.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        list.setFixedCellHeight(40);
+        list.setSelectionBackground(new Color(99, 179, 122, 50));
+        list.setSelectionForeground(KuehlschrankApp.ACCENT);
+        list.setCellRenderer(new RezeptListenRenderer());
+        list.addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) showDetails(); });
 
-        JButton search = Theme.primaryButton("\uD83D\uDD0D  Rezepte vorschlagen");
-        JButton toList = Theme.secondaryButton("\uD83D\uDED2  Fehlende → Einkaufsliste");
-        search.addActionListener(e -> searchRecipes());
-        toList.addActionListener(e -> addMissing());
-        toolbar.add(search);
-        toolbar.add(toList);
+        JScrollPane listScroll = UiHelper.scrollPane(list);
+        listScroll.setBorder(BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1, true));
 
-        // --- Split: Liste links / Detail rechts ---
-        listModel = new DefaultListModel<>();
-        list = new JList<>(listModel);
-        list.setCellRenderer(new RezeptKarteRenderer());
-        list.setBackground(Theme.BG_SURFACE);
-        list.setFixedCellHeight(64);
-        list.setSelectionBackground(Theme.BG_CARD);
-        list.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        list.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) showDetails();
-        });
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 8));
+        leftPanel.setOpaque(false);
+        leftPanel.setPreferredSize(new Dimension(270, 0));
+        leftPanel.add(UiHelper.sectionLabel("\uD83D\uDCD6  Vorschlaege"), BorderLayout.NORTH);
+        leftPanel.add(listScroll, BorderLayout.CENTER);
 
+        // --- Detail-Bereich ---
         details = new JTextArea();
         details.setEditable(false);
         details.setLineWrap(true);
         details.setWrapStyleWord(true);
-        details.setFont(Theme.FONT_BODY);
-        details.setBackground(Theme.BG_CARD);
-        details.setForeground(Theme.TEXT_PRIMARY);
-        details.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        details.setText("Rezepte vorschlagen und links auswaehlen.");
-        details.setForeground(Theme.TEXT_MUTED);
+        details.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        details.setBackground(KuehlschrankApp.BG_CARD);
+        details.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        details.setCaretColor(KuehlschrankApp.ACCENT);
+        details.setBorder(new EmptyBorder(16, 16, 16, 16));
+        details.setText("Klicke auf \"Rezepte vorschlagen\", um passende Rezepte\nfuer deinen Kuehlschrankinhalt zu finden.");
+
+        JScrollPane detailScroll = UiHelper.scrollPane(details);
+        detailScroll.setBorder(BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1, true));
 
         JSplitPane split = new JSplitPane(
-            JSplitPane.HORIZONTAL_SPLIT,
-            Theme.scrollPane(list),
-            Theme.scrollPane(details));
-        split.setDividerLocation(280);
-        split.setDividerSize(4);
-        split.setBorder(BorderFactory.createEmptyBorder());
-        split.setBackground(Theme.BG_SURFACE);
-        split.setOpaque(false);
+                JSplitPane.HORIZONTAL_SPLIT, leftPanel, detailScroll);
+        split.setDividerLocation(270);
+        split.setDividerSize(6);
+        split.setBackground(KuehlschrankApp.BG_DARK);
+        split.setBorder(null);
 
-        root.add(toolbar, BorderLayout.NORTH);
-        root.add(split,   BorderLayout.CENTER);
+        // --- Buttons ---
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        btnRow.setOpaque(false);
+        JButton search = UiHelper.accentButton("\uD83D\uDD0D  Rezepte vorschlagen");
+        JButton toList = UiHelper.ghostButton("\uD83D\uDED2  Fehlende Zutaten zur Einkaufsliste");
+        search.addActionListener(e -> searchRecipes());
+        toList.addActionListener(e -> addMissing());
+        btnRow.add(search);
+        btnRow.add(toList);
+
+        root.add(btnRow, BorderLayout.NORTH);
+        root.add(split, BorderLayout.CENTER);
         return root;
     }
 
     private void searchRecipes() {
         aktuelle = rezeptService.rezepteVorschlagen(verwaltung);
-        listModel.clear();
-        for (Rezept r : aktuelle) listModel.addElement(r);
+        model.clear();
+        for (Rezept r : aktuelle)
+            model.addElement(r.getName() + " (" + r.getZubereitungszeit() + ")");
         details.setText(aktuelle.isEmpty()
-            ? "Keine passenden Rezepte gefunden."
-            : "Bitte links ein Rezept auswaehlen.");
-        details.setForeground(Theme.TEXT_MUTED);
+                ? "Keine passenden Rezepte gefunden."
+                : "Bitte links ein Rezept auswaehlen.");
     }
 
     private void showDetails() {
         int idx = list.getSelectedIndex();
         if (idx < 0 || aktuelle == null || idx >= aktuelle.size()) return;
-
         Rezept r = aktuelle.get(idx);
         StringBuilder sb = new StringBuilder();
-        sb.append(r.getName()).append("\n");
-        sb.append("\u2014  ").append(r.getZubereitungszeit())
-          .append("  |  ").append(r.getQuelle()).append("\n\n");
-        sb.append(r.getBeschreibung()).append("\n\n");
+        sb.append("Rezept: ").append(r.getName()).append("\n\n");
+        sb.append("Beschreibung:\n").append(r.getBeschreibung()).append("\n\n");
         sb.append("Zutaten:\n");
         for (String z : r.getZutaten()) {
             boolean da = verwaltung.produktSuchen(z) != null;
-            sb.append(da ? "  \u2713  " : "  \u2717  ").append(z);
-            sb.append(da ? "  (vorhanden)" : "  (fehlt)").append("\n");
+            sb.append(da ? "  ✓ " : "  ✗ ").append(z)
+              .append(da ? "  (vorhanden)" : "  (fehlt)").append("\n");
         }
         details.setText(sb.toString());
-        details.setForeground(Theme.TEXT_PRIMARY);
         details.setCaretPosition(0);
     }
 
@@ -131,43 +137,27 @@ public class RezeptAnsicht {
                     z, 1, "Stueck",
                     de.hwrberlin.kuehlschrank.model.Produktkategorie.SONSTIGES));
         }
+        // Bug-Fix: Einkaufsliste sofort aktualisieren
         if (einkaufsAnsicht != null) einkaufsAnsicht.refresh();
         JOptionPane.showMessageDialog(null,
-            fehlend.size() + " Zutat(en) zur Einkaufsliste hinzugefuegt.");
+                fehlend.size() + " Zutat(en) zur Einkaufsliste hinzugefuegt.");
     }
 
-    /** Karten-Renderer fuer die Rezept-JList. */
-    private class RezeptKarteRenderer
-            extends JPanel implements ListCellRenderer<Rezept> {
-        private final JLabel titel  = new JLabel();
-        private final JLabel info   = new JLabel();
-
-        RezeptKarteRenderer() {
-            setLayout(new BorderLayout(0, 4));
-            setOpaque(true);
-            setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER),
-                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
-            titel.setFont(Theme.FONT_HEADING);
-            info.setFont(Theme.FONT_SMALL);
-            info.setForeground(Theme.TEXT_MUTED);
-            add(titel, BorderLayout.CENTER);
-            add(info,  BorderLayout.SOUTH);
-        }
-
+    private static class RezeptListenRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(
-                JList<? extends Rezept> list, Rezept value,
-                int index, boolean isSelected, boolean cellHasFocus) {
-            setBackground(isSelected ? Theme.BG_CARD : Theme.BG_SURFACE);
-            titel.setForeground(Theme.TEXT_PRIMARY);
-            titel.setText(value.getName());
-            long fehlend = value.getZutaten().stream()
-                .filter(z -> verwaltung.produktSuchen(z) == null).count();
-            info.setText(value.getZubereitungszeit() + "  |  "
-                + (fehlend == 0 ? "Alle Zutaten vorhanden"
-                               : fehlend + " Zutat(en) fehlen"));
-            return this;
+                JList<?> list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+            JLabel lbl = (JLabel) super.getListCellRendererComponent(
+                    list, value, index, isSelected, cellHasFocus);
+            lbl.setBackground(isSelected
+                    ? new Color(99, 179, 122, 50)
+                    : (index % 2 == 0 ? KuehlschrankApp.BG_CARD : KuehlschrankApp.BG_HOVER));
+            lbl.setForeground(isSelected ? KuehlschrankApp.ACCENT : KuehlschrankApp.TEXT_PRIMARY);
+            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            lbl.setBorder(new EmptyBorder(0, 16, 0, 16));
+            lbl.setOpaque(true);
+            return lbl;
         }
     }
 }

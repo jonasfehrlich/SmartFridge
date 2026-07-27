@@ -6,6 +6,7 @@ import de.hwrberlin.kuehlschrank.service.KuehlschrankVerwaltung;
 import de.hwrberlin.kuehlschrank.service.RezeptService;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * Tab "Chaos-Pfanne": erkennt bald ablaufende Produkte und schlaegt
- * passende Rezepte vor. Zutaten werden farbig gekennzeichnet.
+ * passende Rezepte vor. Modernes Dark-UI mit farblichen Markierungen.
  */
 public class ChaosPfanneAnsicht {
     private static final int BALD_ABLAUFEND_TAGE = 5;
@@ -24,193 +25,219 @@ public class ChaosPfanneAnsicht {
     private final EinkaufslistenAnsicht einkaufsAnsicht;
 
     private JPanel ergebnisPanel;
-    private JScrollPane scroll;
+    private JScrollPane scrollPane;
 
     public ChaosPfanneAnsicht(KuehlschrankVerwaltung v, RezeptService r,
                                EinkaufslistenAnsicht ea) {
-        this.verwaltung = v;
+        this.verwaltung   = v;
         this.rezeptService = r;
         this.einkaufsAnsicht = ea;
     }
 
     public JPanel createPanel() {
-        JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(Theme.BG_SURFACE);
+        JPanel root = new JPanel(new BorderLayout(0, 16));
+        root.setBackground(KuehlschrankApp.BG_DARK);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // --- Hero-Banner ---
-        JPanel hero = new JPanel(new BorderLayout()) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setPaint(new GradientPaint(
-                    0, 0, Theme.CHAOS_BG,
-                    getWidth(), getHeight(), new Color(0x14, 0x0A, 0x28)));
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                g2.dispose();
-            }
-        };
-        hero.setOpaque(false);
-        hero.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER),
-            BorderFactory.createEmptyBorder(16, 20, 16, 20)));
+        // Header-Bereich
+        JPanel header = new JPanel(new BorderLayout(12, 0));
+        header.setOpaque(false);
 
-        JLabel heroTitle = new JLabel("\uD83C\uDF73  Chaos-Pfanne");
-        heroTitle.setFont(Theme.FONT_TITLE);
-        heroTitle.setForeground(Theme.CHAOS);
+        JLabel heading = new JLabel("\uD83C\uDF73  Chaos-Pfanne");
+        heading.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        heading.setForeground(KuehlschrankApp.TEXT_PRIMARY);
 
-        JLabel heroSub = new JLabel(
-            "Nutze bald ablaufende Produkte fuer ein spontanes Rezept.");
-        heroSub.setFont(Theme.FONT_BODY);
-        heroSub.setForeground(Theme.TEXT_MUTED);
+        JLabel sub = new JLabel("Erstellt Rezepte aus bald ablaufenden Produkten");
+        sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        sub.setForeground(KuehlschrankApp.TEXT_SECONDARY);
 
-        JButton btn = Theme.primaryButton("\uD83C\uDF73  Jetzt erstellen") {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color bg = getModel().isRollover() ? Theme.CHAOS.brighter() : Theme.CHAOS;
-                g2.setColor(bg);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+        titleBlock.add(heading);
+        titleBlock.add(Box.createVerticalStrut(3));
+        titleBlock.add(sub);
 
-        JPanel heroText = new JPanel(new GridLayout(2, 1, 0, 4));
-        heroText.setOpaque(false);
-        heroText.add(heroTitle);
-        heroText.add(heroSub);
-        hero.add(heroText, BorderLayout.CENTER);
-        hero.add(btn,      BorderLayout.EAST);
-
-        // --- Ergebnis-Scrollbereich ---
-        ergebnisPanel = new JPanel();
-        ergebnisPanel.setLayout(new BoxLayout(ergebnisPanel, BoxLayout.Y_AXIS));
-        ergebnisPanel.setBackground(Theme.BG_SURFACE);
-        ergebnisPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-
-        JLabel hint = new JLabel(
-            "Klicke auf \"Jetzt erstellen\", um Rezeptvorschlaege zu sehen.");
-        hint.setFont(Theme.FONT_BODY);
-        hint.setForeground(Theme.TEXT_MUTED);
-        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
-        ergebnisPanel.add(hint);
-
-        scroll = Theme.scrollPane(ergebnisPanel);
-
+        JButton btn = UiHelper.accentButton("\uD83C\uDF73  Chaos-Pfanne erstellen");
         btn.addActionListener(e -> erstelleChaosPfanne());
 
-        root.add(hero,   BorderLayout.NORTH);
-        root.add(scroll, BorderLayout.CENTER);
+        header.add(titleBlock, BorderLayout.WEST);
+        header.add(btn, BorderLayout.EAST);
+        root.add(header, BorderLayout.NORTH);
+
+        // Ergebnis-Bereich
+        ergebnisPanel = new JPanel();
+        ergebnisPanel.setLayout(new BoxLayout(ergebnisPanel, BoxLayout.Y_AXIS));
+        ergebnisPanel.setBackground(KuehlschrankApp.BG_DARK);
+
+        JLabel placeholder = new JLabel(
+                "<html><center>Klicke auf \"Chaos-Pfanne erstellen\"<br>"
+                + "um Rezeptvorschlaege fuer bald ablaufende Produkte zu erhalten.</center></html>");
+        placeholder.setForeground(KuehlschrankApp.TEXT_SECONDARY);
+        placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        placeholder.setAlignmentX(Component.CENTER_ALIGNMENT);
+        placeholder.setBorder(new EmptyBorder(60, 0, 0, 0));
+        ergebnisPanel.add(placeholder);
+
+        scrollPane = UiHelper.scrollPane(ergebnisPanel);
+        scrollPane.setBorder(null);
+        root.add(scrollPane, BorderLayout.CENTER);
+
         return root;
     }
 
     private void erstelleChaosPfanne() {
         ergebnisPanel.removeAll();
 
-        List<Produkt> baldAblaufend =
-            verwaltung.baldAblaufendeProdukte(BALD_ABLAUFEND_TAGE);
+        List<Produkt> baldAblaufend = verwaltung.baldAblaufendeProdukte(BALD_ABLAUFEND_TAGE);
 
         if (baldAblaufend.isEmpty()) {
-            JLabel ok = new JLabel(
-                "\u2705  Alle Produkte sind noch gut haltbar – kein Chaos noetig!");
-            ok.setFont(Theme.FONT_BODY);
-            ok.setForeground(Theme.SUCCESS);
+            JLabel ok = new JLabel("\u2705  Alle Produkte sind noch gut haltbar – keine Chaos-Pfanne noetig!");
+            ok.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            ok.setForeground(KuehlschrankApp.ACCENT);
             ok.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ok.setBorder(new EmptyBorder(8, 0, 0, 0));
             ergebnisPanel.add(ok);
             ergebnisPanel.revalidate();
             ergebnisPanel.repaint();
             return;
         }
 
-        // --- Ablaufende Produkte ---
-        JLabel secTitle = new JLabel("Bald ablaufende Produkte:");
-        secTitle.setFont(Theme.FONT_HEADING);
-        secTitle.setForeground(Theme.WARNING);
-        secTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        ergebnisPanel.add(secTitle);
-        ergebnisPanel.add(Box.createVerticalStrut(8));
-
-        LocalDate heute = LocalDate.now();
-        JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        badgeRow.setOpaque(false);
-        badgeRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        for (Produkt p : baldAblaufend) {
-            long tage = ChronoUnit.DAYS.between(heute, p.getAblaufdatum());
-            String txt = p.getName() + (tage == 0 ? " (heute!)" : " (" + tage + "d)");
-            badgeRow.add(Theme.badge(txt, Theme.WARNING, Theme.WARNING_BG));
-        }
-        ergebnisPanel.add(badgeRow);
-        ergebnisPanel.add(Box.createVerticalStrut(20));
+        // --- Karte: Bald ablaufende Produkte ---
+        ergebnisPanel.add(buildAblaufKarte(baldAblaufend));
+        ergebnisPanel.add(Box.createVerticalStrut(12));
 
         // --- Rezeptvorschlaege ---
-        List<String> zutatenNamen = new ArrayList<>();
-        for (Produkt p : baldAblaufend) zutatenNamen.add(p.getName());
-
-        List<Rezept> vorschlaege = rezeptService.rezepteVorschlagen(verwaltung);
+        List<Rezept> vorschlaege = rezeptService.erstelleChaosPfanne(verwaltung);
+        List<String> ablaufNamen = new ArrayList<>();
+        for (Produkt p : baldAblaufend) ablaufNamen.add(p.getName());
 
         if (vorschlaege.isEmpty()) {
-            JLabel noRez = new JLabel(
-                "Keine passenden Rezepte. Tipp: Einfach alles zusammen anbraten!");
-            noRez.setFont(Theme.FONT_BODY);
-            noRez.setForeground(Theme.TEXT_MUTED);
-            noRez.setAlignmentX(Component.LEFT_ALIGNMENT);
-            ergebnisPanel.add(noRez);
+            JLabel noRec = new JLabel("\uD83D\uDCA1  Keine passenden Rezepte gefunden – einfach alles zusammen anbraten!");
+            noRec.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+            noRec.setForeground(KuehlschrankApp.ACCENT_WARN);
+            noRec.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ergebnisPanel.add(noRec);
         } else {
-            JLabel rezTitle = new JLabel("Rezeptvorschlaege:");
-            rezTitle.setFont(Theme.FONT_HEADING);
-            rezTitle.setForeground(Theme.CHAOS);
-            rezTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-            ergebnisPanel.add(rezTitle);
-            ergebnisPanel.add(Box.createVerticalStrut(10));
-
+            JLabel rezLabel = UiHelper.sectionLabel("Rezeptvorschlaege:");
+            rezLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ergebnisPanel.add(rezLabel);
+            ergebnisPanel.add(Box.createVerticalStrut(8));
             for (Rezept r : vorschlaege) {
-                ergebnisPanel.add(rezeptKarte(r, zutatenNamen));
+                ergebnisPanel.add(buildRezeptKarte(r, ablaufNamen));
                 ergebnisPanel.add(Box.createVerticalStrut(10));
             }
         }
 
         ergebnisPanel.revalidate();
         ergebnisPanel.repaint();
+        scrollPane.getVerticalScrollBar().setValue(0);
     }
 
-    private JPanel rezeptKarte(Rezept r, List<String> ablaufend) {
-        JPanel card = new JPanel(new BorderLayout(0, 10));
-        card.setBackground(Theme.BG_CARD);
+    private JPanel buildAblaufKarte(List<Produkt> baldAblaufend) {
+        JPanel card = UiHelper.card();
+        card.setLayout(new BorderLayout(0, 10));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height + 200));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Theme.CHAOS.darker().darker(), 1),
-            BorderFactory.createEmptyBorder(14, 16, 14, 16)));
+
+        JLabel title = new JLabel("\u26A0  Bald ablaufende Produkte (\u2264 " + BALD_ABLAUFEND_TAGE + " Tage)");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        title.setForeground(KuehlschrankApp.ACCENT_WARN);
+        card.add(title, BorderLayout.NORTH);
+
+        JPanel list = new JPanel();
+        list.setLayout(new BoxLayout(list, BoxLayout.Y_AXIS));
+        list.setOpaque(false);
+
+        LocalDate heute = LocalDate.now();
+        for (Produkt p : baldAblaufend) {
+            long tage = ChronoUnit.DAYS.between(heute, p.getAblaufdatum());
+            String tagText = tage == 0 ? " — HEUTE noch haltbar!" : " — noch " + tage + " Tag(e)";
+            Color c = tage == 0 ? KuehlschrankApp.ACCENT_DANGER
+                    : tage <= 2 ? KuehlschrankApp.ACCENT_WARN
+                    : KuehlschrankApp.TEXT_PRIMARY;
+
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+            row.setOpaque(false);
+            JLabel dot  = new JLabel("●");
+            dot.setForeground(c);
+            dot.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            JLabel name = new JLabel(p.getName());
+            name.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            name.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+            JLabel info = new JLabel(tagText);
+            info.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            info.setForeground(c);
+            row.add(dot); row.add(name); row.add(info);
+            list.add(row);
+        }
+        card.add(list, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel buildRezeptKarte(Rezept r, List<String> ablaufNamen) {
+        JPanel card = UiHelper.card();
+        card.setLayout(new BorderLayout(0, 10));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height + 300));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Titel-Zeile
-        JPanel titleRow = new JPanel(new BorderLayout(8, 0));
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         titleRow.setOpaque(false);
         JLabel name = new JLabel(r.getName());
-        name.setFont(Theme.FONT_HEADING);
-        name.setForeground(Theme.TEXT_PRIMARY);
-        JLabel zeit = Theme.badge(r.getZubereitungszeit(), Theme.CHAOS, Theme.CHAOS_BG);
-        titleRow.add(name, BorderLayout.WEST);
-        titleRow.add(zeit, BorderLayout.EAST);
+        name.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        name.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        JLabel zeit = UiHelper.badge(r.getZubereitungszeit(), KuehlschrankApp.ACCENT_BLUE);
+        titleRow.add(name);
+        titleRow.add(zeit);
         card.add(titleRow, BorderLayout.NORTH);
 
-        // Beschreibung
-        JLabel desc = new JLabel("<html>" + r.getBeschreibung() + "</html>");
-        desc.setFont(Theme.FONT_BODY);
-        desc.setForeground(Theme.TEXT_MUTED);
-        card.add(desc, BorderLayout.CENTER);
+        // Beschreibung + Zutaten
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
 
-        // Zutaten mit Badges
-        JPanel zutatenRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        zutatenRow.setOpaque(false);
+        JLabel beschr = new JLabel("<html>" + r.getBeschreibung() + "</html>");
+        beschr.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        beschr.setForeground(KuehlschrankApp.TEXT_SECONDARY);
+        beschr.setBorder(new EmptyBorder(4, 0, 10, 0));
+        beschr.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(beschr);
+
+        JLabel zLabel = new JLabel("Zutaten:");
+        zLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        zLabel.setForeground(KuehlschrankApp.TEXT_SECONDARY);
+        zLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(zLabel);
+
         for (String z : r.getZutaten()) {
-            boolean isBald = ablaufend.stream().anyMatch(n -> n.equalsIgnoreCase(z));
-            boolean da     = verwaltung.produktSuchen(z) != null;
-            JLabel badge;
-            if (isBald)       badge = Theme.badge("\u26A0 " + z, Theme.WARNING, Theme.WARNING_BG);
-            else if (da)      badge = Theme.badge("\u2713 " + z, Theme.SUCCESS, Theme.SUCCESS_BG);
-            else              badge = Theme.badge("+ " + z, Theme.ACCENT, new Color(0x14, 0x25, 0x40));
-            zutatenRow.add(badge);
+            boolean ablaufend = ablaufNamen.stream().anyMatch(n -> n.equalsIgnoreCase(z));
+            boolean vorhanden = verwaltung.produktSuchen(z) != null;
+
+            JPanel zRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 1));
+            zRow.setOpaque(false);
+            zRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JLabel icon = new JLabel(ablaufend ? "\u26A0" : vorhanden ? "\u2713" : "+");
+            Color col   = ablaufend ? KuehlschrankApp.ACCENT_WARN
+                        : vorhanden ? KuehlschrankApp.ACCENT
+                        : KuehlschrankApp.ACCENT_BLUE;
+            icon.setForeground(col);
+            icon.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+            JLabel zName = new JLabel(z);
+            zName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            zName.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+
+            String tagText = ablaufend ? "bald ablaufend!"
+                           : vorhanden ? "vorhanden"
+                           : "einkaufen empfohlen";
+            JLabel tag = UiHelper.badge(tagText, col);
+
+            zRow.add(icon); zRow.add(zName); zRow.add(tag);
+            body.add(zRow);
         }
-        card.add(zutatenRow, BorderLayout.SOUTH);
+        card.add(body, BorderLayout.CENTER);
         return card;
     }
 }

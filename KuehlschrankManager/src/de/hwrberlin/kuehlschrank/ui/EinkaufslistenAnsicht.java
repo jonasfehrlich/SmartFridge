@@ -6,13 +6,14 @@ import de.hwrberlin.kuehlschrank.service.EinkaufslistenService;
 import de.hwrberlin.kuehlschrank.service.KuehlschrankVerwaltung;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class EinkaufslistenAnsicht {
     private final KuehlschrankVerwaltung verwaltung;
     private final EinkaufslistenService service;
-    private DefaultListModel<Einkaufslisteneintrag> listModel;
-    private JList<Einkaufslisteneintrag> list;
+    private DefaultListModel<String> model;
+    private JList<String> list;
 
     public EinkaufslistenAnsicht(KuehlschrankVerwaltung v, EinkaufslistenService s) {
         this.verwaltung = v;
@@ -20,24 +21,45 @@ public class EinkaufslistenAnsicht {
     }
 
     public JPanel createPanel() {
-        JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(Theme.BG_SURFACE);
+        JPanel root = new JPanel(new BorderLayout(0, 12));
+        root.setBackground(KuehlschrankApp.BG_DARK);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // --- Toolbar ---
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
-        toolbar.setBackground(Theme.BG_SURFACE);
-        toolbar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
+        // Header
+        JLabel heading = UiHelper.sectionLabel("\uD83D\uDED2  Einkaufsliste");
+        root.add(heading, BorderLayout.NORTH);
 
-        JButton gen    = Theme.secondaryButton("\uD83D\uDD04  Neu generieren");
-        JButton bought = Theme.primaryButton("\u2713  Als gekauft");
-        JButton clean  = Theme.secondaryButton("\uD83D\uDDD1  Gekaufte entfernen");
-        JButton add    = Theme.secondaryButton("+ Manuell");
+        // Liste
+        model = new DefaultListModel<>();
+        list  = new JList<>(model);
+        list.setBackground(KuehlschrankApp.BG_CARD);
+        list.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        list.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        list.setFixedCellHeight(42);
+        list.setSelectionBackground(new Color(99, 179, 122, 50));
+        list.setSelectionForeground(KuehlschrankApp.ACCENT);
+        list.setCellRenderer(new EinkaufsListenRenderer());
+        list.setBorder(null);
+
+        JScrollPane scroll = UiHelper.scrollPane(list);
+        scroll.setBorder(BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1, true));
+        root.add(scroll, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        btnRow.setOpaque(false);
+
+        JButton gen    = UiHelper.accentButton("\uD83D\uDD04  Liste neu generieren");
+        JButton bought = UiHelper.ghostButton("\u2713  Als gekauft markieren");
+        JButton clean  = UiHelper.ghostButton("\uD83E\uDDF9  Gekaufte entfernen");
+        JButton add    = UiHelper.ghostButton("+ Manuell hinzufuegen");
 
         gen.addActionListener(e -> { service.listeGenerieren(verwaltung); refresh(); });
         bought.addActionListener(e -> {
-            Einkaufslisteneintrag sel = list.getSelectedValue();
+            String sel = list.getSelectedValue();
             if (sel != null) {
-                service.alsGekauftMarkieren(sel.getProduktname());
+                service.alsGekauftMarkieren(
+                        sel.replace("[ ] ", "").replace("[x] ", "").split("  ")[0]);
                 refresh();
             }
         });
@@ -50,86 +72,55 @@ public class EinkaufslistenAnsicht {
                 double md  = 1;
                 try { md = Double.parseDouble(m); } catch (Exception ignored) {}
                 service.eintragHinzufuegen(new Einkaufslisteneintrag(
-                    n.trim(), md, eih == null ? "Stueck" : eih.trim(),
-                    Produktkategorie.SONSTIGES));
+                        n.trim(), md,
+                        eih == null ? "Stueck" : eih.trim(),
+                        Produktkategorie.SONSTIGES));
                 refresh();
             }
         });
 
-        toolbar.add(gen); toolbar.add(bought); toolbar.add(clean); toolbar.add(add);
-
-        // --- Liste ---
-        listModel = new DefaultListModel<>();
-        list = new JList<>(listModel);
-        list.setCellRenderer(new EinkaufslistenRenderer());
-        list.setBackground(Theme.BG_SURFACE);
-        list.setFixedCellHeight(52);
-        list.setSelectionBackground(Theme.BG_CARD);
-        list.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        btnRow.add(gen);
+        btnRow.add(bought);
+        btnRow.add(clean);
+        btnRow.add(add);
+        root.add(btnRow, BorderLayout.SOUTH);
 
         service.listeGenerieren(verwaltung);
         refresh();
-
-        root.add(toolbar,                BorderLayout.NORTH);
-        root.add(Theme.scrollPane(list), BorderLayout.CENTER);
         return root;
     }
 
     public void refresh() {
-        if (listModel == null) return;
-        listModel.clear();
-        for (Einkaufslisteneintrag e : service.getEintraege()) listModel.addElement(e);
+        if (model == null) return;
+        model.clear();
+        for (Einkaufslisteneintrag e : service.getEintraege())
+            model.addElement(e.toString());
     }
 
-    /** Card-Renderer fuer Einkaufslisteneintraege. */
-    private static class EinkaufslistenRenderer
-            extends JPanel implements ListCellRenderer<Einkaufslisteneintrag> {
-
-        private final JLabel name   = new JLabel();
-        private final JLabel detail = new JLabel();
-        private final JLabel check  = new JLabel();
-
-        EinkaufslistenRenderer() {
-            setLayout(new BorderLayout(12, 0));
-            setOpaque(true);
-            setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)));
-
-            JPanel text = new JPanel(new GridLayout(2, 1, 0, 2));
-            text.setOpaque(false);
-            name.setFont(Theme.FONT_BODY);
-            detail.setFont(Theme.FONT_SMALL);
-            text.add(name);
-            text.add(detail);
-
-            check.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-            check.setPreferredSize(new Dimension(28, 28));
-
-            add(check, BorderLayout.WEST);
-            add(text,  BorderLayout.CENTER);
-        }
-
+    /** Custom Renderer fuer Einkaufslisten-Eintraege */
+    private static class EinkaufsListenRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(
-                JList<? extends Einkaufslisteneintrag> list,
-                Einkaufslisteneintrag value, int index,
+                JList<?> list, Object value, int index,
                 boolean isSelected, boolean cellHasFocus) {
+            JLabel lbl = (JLabel) super.getListCellRendererComponent(
+                    list, value, index, isSelected, cellHasFocus);
 
-            boolean gekauft = value.isGekauft();
-            setBackground(isSelected ? Theme.BG_CARD : Theme.BG_SURFACE);
+            String text = value == null ? "" : value.toString();
+            boolean done = text.startsWith("[x]");
 
-            check.setText(gekauft ? "\u2611" : "\u2610");
-            check.setForeground(gekauft ? Theme.SUCCESS : Theme.TEXT_MUTED);
-
-            name.setText(value.getProduktname());
-            name.setForeground(gekauft ? Theme.TEXT_FAINT : Theme.TEXT_PRIMARY);
-
-            detail.setText(value.getBenoetigteMenge() + " "
-                + value.getEinheit() + "  |  " + value.getKategorie());
-            detail.setForeground(Theme.TEXT_MUTED);
-
-            return this;
+            lbl.setBackground(isSelected
+                    ? new Color(99, 179, 122, 50)
+                    : (index % 2 == 0 ? KuehlschrankApp.BG_CARD : KuehlschrankApp.BG_HOVER));
+            lbl.setForeground(done
+                    ? KuehlschrankApp.TEXT_SECONDARY
+                    : KuehlschrankApp.TEXT_PRIMARY);
+            lbl.setFont(done
+                    ? new Font("Segoe UI", Font.ITALIC, 13)
+                    : new Font("Segoe UI", Font.PLAIN, 13));
+            lbl.setBorder(new EmptyBorder(0, 16, 0, 16));
+            lbl.setOpaque(true);
+            return lbl;
         }
     }
 }

@@ -5,6 +5,7 @@ import de.hwrberlin.kuehlschrank.model.Produktkategorie;
 import de.hwrberlin.kuehlschrank.service.KuehlschrankVerwaltung;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -20,109 +21,139 @@ public class ProduktAnsicht {
 
     public JPanel createPanel() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(Theme.BG_SURFACE);
+        root.setBackground(KuehlschrankApp.BG_DARK);
+        root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // --- Tabelle ---
+        // Tabelle
         model = new DefaultTableModel(
-            new Object[]{"Name", "Kategorie", "Menge", "MHD", "Status"}, 0) {
+                new Object[]{"Name", "Kategorie", "Menge", "MHD", "Status"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(model);
-        table.setBackground(Theme.BG_CARD);
-        table.setForeground(Theme.TEXT_PRIMARY);
-        table.setFont(Theme.FONT_BODY);
-        table.setRowHeight(36);
-        table.setShowGrid(false);
-        table.setIntercellSpacing(new Dimension(0, 0));
-        table.setSelectionBackground(Theme.ACCENT.darker());
-        table.setSelectionForeground(Theme.TEXT_PRIMARY);
-        table.setBorder(BorderFactory.createEmptyBorder());
+        styleTable(table);
+        refresh();
 
-        // Spaltenbreiten
-        table.getColumnModel().getColumn(0).setPreferredWidth(180);
-        table.getColumnModel().getColumn(1).setPreferredWidth(120);
-        table.getColumnModel().getColumn(2).setPreferredWidth(100);
-        table.getColumnModel().getColumn(3).setPreferredWidth(110);
-        table.getColumnModel().getColumn(4).setPreferredWidth(140);
+        JScrollPane tableScroll = UiHelper.scrollPane(table);
+        tableScroll.setBorder(BorderFactory.createLineBorder(KuehlschrankApp.BORDER, 1, true));
 
-        // Status-Spalte farbig
-        table.getColumnModel().getColumn(4).setCellRenderer(Theme.statusRenderer());
+        // Formular
+        JPanel form = buildForm();
 
-        // Standard-Renderer fuer alle anderen Spalten
-        DefaultTableCellRenderer std = new DefaultTableCellRenderer();
-        std.setBackground(Theme.BG_CARD);
-        std.setForeground(Theme.TEXT_PRIMARY);
-        std.setFont(Theme.FONT_BODY);
-        std.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
-        for (int i = 0; i < 4; i++) table.getColumnModel().getColumn(i).setCellRenderer(std);
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tableScroll, form);
+        split.setResizeWeight(0.65);
+        split.setDividerSize(6);
+        split.setBackground(KuehlschrankApp.BG_DARK);
+        split.setBorder(null);
 
-        // Header
-        JTableHeader header = table.getTableHeader();
-        header.setBackground(Theme.BG_INPUT);
-        header.setForeground(Theme.TEXT_MUTED);
-        header.setFont(Theme.FONT_SMALL);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
+        root.add(split, BorderLayout.CENTER);
+        return root;
+    }
+
+    private void styleTable(JTable t) {
+        t.setBackground(KuehlschrankApp.BG_CARD);
+        t.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        t.setSelectionBackground(new Color(99, 179, 122, 50));
+        t.setSelectionForeground(KuehlschrankApp.ACCENT);
+        t.setGridColor(KuehlschrankApp.BORDER);
+        t.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        t.setRowHeight(36);
+        t.setShowVerticalLines(false);
+        t.setIntercellSpacing(new Dimension(0, 1));
+        t.setFocusable(false);
+
+        JTableHeader header = t.getTableHeader();
+        header.setBackground(KuehlschrankApp.BG_DARK);
+        header.setForeground(KuehlschrankApp.TEXT_SECONDARY);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, KuehlschrankApp.BORDER));
         ((DefaultTableCellRenderer) header.getDefaultRenderer())
-            .setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+                .setHorizontalAlignment(SwingConstants.LEFT);
 
-        JScrollPane tableScroll = Theme.scrollPane(table);
-        tableScroll.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
+        // Status-Spalte farbig rendern
+        t.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable tbl, Object val, boolean sel, boolean foc, int row, int col) {
+                super.getTableCellRendererComponent(tbl, val, sel, foc, row, col);
+                String s = val == null ? "" : val.toString();
+                setBackground(sel ? new Color(99, 179, 122, 50) : KuehlschrankApp.BG_CARD);
+                setForeground(switch (s) {
+                    case "ABGELAUFEN" -> KuehlschrankApp.ACCENT_DANGER;
+                    case "Bald abgelaufen" -> KuehlschrankApp.ACCENT_WARN;
+                    case "Nachkauf noetig" -> KuehlschrankApp.ACCENT_BLUE;
+                    default -> KuehlschrankApp.ACCENT;
+                });
+                setFont(new Font("Segoe UI", Font.BOLD, 12));
+                setBorder(new EmptyBorder(0, 10, 0, 10));
+                setOpaque(true);
+                return this;
+            }
+        });
+        // Standard-Renderer fuer restliche Spalten
+        DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable tbl, Object val, boolean sel, boolean foc, int row, int col) {
+                super.getTableCellRendererComponent(tbl, val, sel, foc, row, col);
+                setBackground(sel ? new Color(99, 179, 122, 50) : KuehlschrankApp.BG_CARD);
+                setForeground(KuehlschrankApp.TEXT_PRIMARY);
+                setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                setBorder(new EmptyBorder(0, 10, 0, 10));
+                setOpaque(true);
+                return this;
+            }
+        };
+        for (int i = 0; i < 4; i++) t.getColumnModel().getColumn(i).setCellRenderer(cellRenderer);
+    }
 
-        // --- Formular unten (Karte) ---
-        JPanel formCard = Theme.card();
-        formCard.setLayout(new BorderLayout(16, 8));
-        formCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, Theme.BORDER),
-            BorderFactory.createEmptyBorder(16, 20, 16, 20)));
-        formCard.setBackground(Theme.BG_SURFACE);
-        formCard.setOpaque(true);
+    private JPanel buildForm() {
+        JPanel card = UiHelper.card();
+        card.setLayout(new BorderLayout(12, 12));
+        card.setBackground(KuehlschrankApp.BG_CARD);
 
-        JLabel formTitle = new JLabel("Produkt hinzufuegen / aktualisieren");
-        formTitle.setFont(Theme.FONT_HEADING);
-        formTitle.setForeground(Theme.TEXT_PRIMARY);
+        JLabel heading = UiHelper.sectionLabel("\uD83D\uDCE6  Produkt hinzufuegen / aktualisieren");
+        card.add(heading, BorderLayout.NORTH);
 
-        JPanel fields = new JPanel(new GridLayout(2, 6, 10, 8));
-        fields.setOpaque(false);
+        JPanel grid = new JPanel(new GridLayout(3, 4, 10, 10));
+        grid.setOpaque(false);
 
-        JTextField name    = Theme.inputField("Name");
-        JTextField menge   = Theme.inputField("Menge");
-        JTextField einheit = Theme.inputField("Einheit");
-        JTextField min     = Theme.inputField("Mindestmenge");
+        JTextField name    = UiHelper.textField("Name");
+        JTextField menge   = UiHelper.textField("Menge");
+        JTextField einheit = UiHelper.textField("Einheit");
+        JTextField min     = UiHelper.textField("Mindestmenge");
         min.setText("0");
-        JTextField mhd     = Theme.inputField("YYYY-MM-DD");
+        JTextField mhd     = UiHelper.textField("MHD");
         mhd.setText(LocalDate.now().plusDays(7).toString());
         JComboBox<Produktkategorie> kat = new JComboBox<>(Produktkategorie.values());
-        kat.setBackground(Theme.BG_INPUT);
-        kat.setForeground(Theme.TEXT_PRIMARY);
-        kat.setFont(Theme.FONT_BODY);
+        kat.setBackground(KuehlschrankApp.BG_CARD);
+        kat.setForeground(KuehlschrankApp.TEXT_PRIMARY);
+        kat.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        JLabel lName  = new JLabel("Name");      lName.setForeground(Theme.TEXT_MUTED);  lName.setFont(Theme.FONT_SMALL);
-        JLabel lMenge = new JLabel("Menge");     lMenge.setForeground(Theme.TEXT_MUTED); lMenge.setFont(Theme.FONT_SMALL);
-        JLabel lEinh  = new JLabel("Einheit");   lEinh.setForeground(Theme.TEXT_MUTED);  lEinh.setFont(Theme.FONT_SMALL);
-        JLabel lMin   = new JLabel("Mindest");   lMin.setForeground(Theme.TEXT_MUTED);   lMin.setFont(Theme.FONT_SMALL);
-        JLabel lMhd   = new JLabel("MHD");       lMhd.setForeground(Theme.TEXT_MUTED);   lMhd.setFont(Theme.FONT_SMALL);
-        JLabel lKat   = new JLabel("Kategorie"); lKat.setForeground(Theme.TEXT_MUTED);   lKat.setFont(Theme.FONT_SMALL);
+        grid.add(styledLabel("Name"));     grid.add(name);
+        grid.add(styledLabel("Menge"));    grid.add(menge);
+        grid.add(styledLabel("Einheit"));  grid.add(einheit);
+        grid.add(styledLabel("Kategorie"));grid.add(kat);
+        grid.add(styledLabel("Mindestmenge")); grid.add(min);
+        grid.add(styledLabel("MHD (YYYY-MM-DD)")); grid.add(mhd);
 
-        fields.add(lName); fields.add(lMenge); fields.add(lEinh);
-        fields.add(lMin);  fields.add(lMhd);   fields.add(lKat);
-        fields.add(name);  fields.add(menge);  fields.add(einheit);
-        fields.add(min);   fields.add(mhd);    fields.add(kat);
+        card.add(grid, BorderLayout.CENTER);
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         btnRow.setOpaque(false);
-        JButton add = Theme.primaryButton("+ Hinzufuegen");
-        JButton del = Theme.dangerButton("Loeschen");
+        JButton add = UiHelper.accentButton("+ Hinzufuegen / Aktualisieren");
+        JButton del = UiHelper.dangerButton("\uD83D\uDDD1  Ausgewaehlt loeschen");
 
         add.addActionListener(e -> {
             try {
                 double m  = Double.parseDouble(menge.getText().trim());
                 double mn = Double.parseDouble(min.getText().trim());
                 verwaltung.produktHinzufuegen(new Produkt(
-                    name.getText().trim(),
-                    (Produktkategorie) kat.getSelectedItem(),
-                    m, einheit.getText().trim(),
-                    LocalDate.parse(mhd.getText().trim()), mn));
+                        name.getText().trim(),
+                        (Produktkategorie) kat.getSelectedItem(),
+                        m, einheit.getText().trim(),
+                        LocalDate.parse(mhd.getText().trim()), mn));
                 refresh();
+                name.setText(""); menge.setText(""); einheit.setText("");
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
@@ -130,22 +161,22 @@ public class ProduktAnsicht {
         del.addActionListener(e -> {
             int r = table.getSelectedRow();
             if (r >= 0) {
-                verwaltung.produktEntfernen((String) model.getValueAt(r, 0));
+                String n = (String) model.getValueAt(r, 0);
+                verwaltung.produktEntfernen(n);
                 refresh();
             }
         });
         btnRow.add(add);
         btnRow.add(del);
+        card.add(btnRow, BorderLayout.SOUTH);
+        return card;
+    }
 
-        formCard.add(formTitle, BorderLayout.NORTH);
-        formCard.add(fields,   BorderLayout.CENTER);
-        formCard.add(btnRow,   BorderLayout.SOUTH);
-
-        root.add(tableScroll, BorderLayout.CENTER);
-        root.add(formCard,    BorderLayout.SOUTH);
-
-        refresh();
-        return root;
+    private JLabel styledLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        l.setForeground(KuehlschrankApp.TEXT_SECONDARY);
+        return l;
     }
 
     public void refresh() {
@@ -153,15 +184,12 @@ public class ProduktAnsicht {
         model.setRowCount(0);
         for (Produkt p : verwaltung.alleProdukte()) {
             String status = p.istAbgelaufen() ? "ABGELAUFEN"
-                : (p.laeuftBaldAb(3) ? "Bald abgelaufen"
-                : (p.brauchtNachkauf() ? "Nachkauf noetig" : "OK"));
+                    : (p.laeuftBaldAb(3) ? "Bald abgelaufen"
+                    : (p.brauchtNachkauf() ? "Nachkauf noetig" : "OK"));
             model.addRow(new Object[]{
-                p.getName(),
-                p.getKategorie(),
-                p.getMenge() + " " + p.getEinheit(),
-                p.getAblaufdatum(),
-                status
-            });
+                    p.getName(), p.getKategorie(),
+                    p.getMenge() + " " + p.getEinheit(),
+                    p.getAblaufdatum(), status});
         }
     }
 }
