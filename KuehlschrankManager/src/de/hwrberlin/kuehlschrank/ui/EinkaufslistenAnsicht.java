@@ -55,7 +55,8 @@ public class EinkaufslistenAnsicht {
         return p;
     }
 
-    private void refresh() {
+    public void refresh() {
+        if (model == null) return;
         model.clear();
         for (Einkaufslisteneintrag e : service.getEintraege()) model.addElement(e.toString());
     }
