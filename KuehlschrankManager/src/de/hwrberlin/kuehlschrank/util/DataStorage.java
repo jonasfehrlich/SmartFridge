@@ -1,55 +1,43 @@
 package de.hwrberlin.kuehlschrank.util;
-
-import com.google.gson.*;
-import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
-import de.hwrberlin.kuehlschrank.model.FridgeProduct;
-import de.hwrberlin.kuehlschrank.model.Product;
-
 import java.io.*;
-import java.nio.file.*;
-import java.time.LocalDate;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
- * JSON-based persistence helper using Gson.
- * Lecture 2.1.9: Exception handling (IOException, JsonParseException).
+ * Generic persistence helper class based on JSON (library: Google Gson).
+ *
+ * Covered lecture topics:
+ *  - 2.1.8 Generics: generic methods with bounded type parameter <T extends Serializable>
+ *          and Class<T> as type token when loading.
+ *  - 2.1.6 Exceptions: try-with-resources, FileNotFoundException handled separately.
+ *  - 2.1.5 Persistence: objects are written to a file and read back.
+ *
+ * Deviation from lecture (intentional, see REVIEW_Vorlesungsabdeckung.md):
+ * Lecture 2.1.5 shows serialisation via ObjectOutputStream/ObjectInputStream.
+ * Here JSON (Gson) is used instead -> human-readable and more version-robust,
+ * but requires an external library and does not use the JDK Serializable mechanism.
  */
 public class DataStorage {
+    private DataStorage() {}  // Utility class: no instances.
 
-    private static final Gson GSON = buildGson();
-
-    private static Gson buildGson() {
-        // RuntimeTypeAdapterFactory so that FridgeProduct is deserialised correctly
-        RuntimeTypeAdapterFactory<Product> rta =
-            RuntimeTypeAdapterFactory.of(Product.class, "type")
-                .registerSubtype(Product.class,      "Product")
-                .registerSubtype(FridgeProduct.class, "FridgeProduct");
-
-        return new GsonBuilder()
-            .registerTypeAdapterFactory(rta)
-            .registerTypeAdapter(LocalDate.class,
-                (JsonSerializer<LocalDate>)   (src, t, ctx) -> new JsonPrimitive(src.toString()))
-            .registerTypeAdapter(LocalDate.class,
-                (JsonDeserializer<LocalDate>) (json, t, ctx) -> LocalDate.parse(json.getAsString()))
-            .setPrettyPrinting()
-            .create();
-    }
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     public static <T> void save(T object, String filePath) {
-        try {
-            Path path = Paths.get(filePath);
-            Files.createDirectories(path.getParent());
-            Files.writeString(path, GSON.toJson(object));
+        try (FileWriter writer = new FileWriter(filePath)) {
+            gson.toJson(object, writer);
         } catch (IOException e) {
-            System.err.println("Save failed: " + e.getMessage());
+            throw new RuntimeException("Error while saving", e);
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T load(String filePath, Class<T> type) {
-        try {
-            String json = Files.readString(Paths.get(filePath));
-            return GSON.fromJson(json, type);
-        } catch (IOException | JsonParseException e) {
+        try (FileReader reader = new FileReader(filePath)) {
+            return gson.fromJson(reader, type);
+        } catch (FileNotFoundException e) {
             return null;
+        } catch (IOException e) {
+            throw new RuntimeException("Error while loading", e);
         }
     }
 }
