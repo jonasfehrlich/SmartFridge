@@ -15,29 +15,35 @@ public class WarningsView {
         this.fridgeManager = fm;
     }
 
-    public JScrollPane createPanel() {
-        JPanel root = new JPanel();
-        root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBackground(SmartFridgeApp.BG_DARK);
-        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+    /** Returns a JPanel (required by MainWindow's CardLayout). */
+    public JPanel createPanel() {
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBackground(SmartFridgeApp.BG_DARK);
+        content.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        root.add(buildSection(
+        content.add(buildSection(
                 "\u274C  Expired",
                 fridgeManager.getExpiredProducts(),
                 SmartFridgeApp.ACCENT_DANGER));
-        root.add(Box.createVerticalStrut(12));
-        root.add(buildSection(
+        content.add(Box.createVerticalStrut(12));
+        content.add(buildSection(
                 "\u26A0  Expiring soon",
                 fridgeManager.getExpiringSoon(5),
                 SmartFridgeApp.ACCENT_WARN));
-        root.add(Box.createVerticalStrut(12));
-        root.add(buildSection(
+        content.add(Box.createVerticalStrut(12));
+        content.add(buildSection(
                 "\uD83D\uDECD  Restock needed",
                 fridgeManager.getProductsNeedingRestock(),
                 SmartFridgeApp.ACCENT_BLUE));
-        root.add(Box.createVerticalGlue());
+        content.add(Box.createVerticalGlue());
 
-        return UiHelper.scrollPane(root);
+        // Wrap in a scrollable JPanel so the return type is JPanel
+        JScrollPane scroll = UiHelper.scrollPane(content);
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(SmartFridgeApp.BG_DARK);
+        root.add(scroll, BorderLayout.CENTER);
+        return root;
     }
 
     private JPanel buildSection(String title, List<Product> list, Color accentColor) {
