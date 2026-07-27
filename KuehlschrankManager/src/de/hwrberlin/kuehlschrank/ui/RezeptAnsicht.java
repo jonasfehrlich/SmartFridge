@@ -12,22 +12,26 @@ import java.util.List;
 /**
  * Tab "Rezepte": schlaegt Rezepte vor und uebernimmt fehlende Zutaten in die
  * Einkaufsliste. Vorlesung 2.3.1 (Exkurs): Swing (JList, JTextArea, Listener).
- * Anzeige-Bug in RezeptAnsicht behoben („20 Min. min" → „20 Min.")
+ * Anzeige-Bug in RezeptAnsicht behoben ("20 Min. min" -> "20 Min.")
+ * Bug-Fix: Einkaufsliste wird nach dem Hinzufuegen sofort aktualisiert.
  */
 public class RezeptAnsicht {
     private final KuehlschrankVerwaltung verwaltung;
     private final RezeptService rezeptService;
     private final EinkaufslistenService einkaufslistenService;
+    private final EinkaufslistenAnsicht einkaufsAnsicht;
 
     private DefaultListModel<String> model;
     private JList<String> list;
     private JTextArea details;
     private List<Rezept> aktuelle;
 
-    public RezeptAnsicht(KuehlschrankVerwaltung v, RezeptService r, EinkaufslistenService e) {
+    public RezeptAnsicht(KuehlschrankVerwaltung v, RezeptService r,
+                         EinkaufslistenService e, EinkaufslistenAnsicht ea) {
         this.verwaltung = v;
         this.rezeptService = r;
         this.einkaufslistenService = e;
+        this.einkaufsAnsicht = ea;
     }
 
     public JPanel createPanel() {
@@ -73,14 +77,13 @@ public class RezeptAnsicht {
         model.clear();
 
         for (Rezept r : aktuelle) {
-            // getZubereitungszeit() enthaelt bereits die Einheit (z.B. "20 Min.").
             model.addElement(r.getName() + " (" + r.getZubereitungszeit() + ")");
         }
 
         if (aktuelle.isEmpty()) {
             details.setText("Keine passenden Rezepte gefunden.");
         } else {
-            details.setText("Bitte links ein Rezept auswählen.");
+            details.setText("Bitte links ein Rezept auswaehlen.");
         }
     }
 
@@ -112,7 +115,7 @@ public class RezeptAnsicht {
     private void addMissing() {
         int idx = list.getSelectedIndex();
         if (idx < 0 || aktuelle == null || idx >= aktuelle.size()) {
-            JOptionPane.showMessageDialog(null, "Bitte zuerst ein Rezept auswählen.");
+            JOptionPane.showMessageDialog(null, "Bitte zuerst ein Rezept auswaehlen.");
             return;
         }
 
@@ -121,10 +124,16 @@ public class RezeptAnsicht {
 
         for (String z : fehlend) {
             einkaufslistenService.eintragHinzufuegen(
-                new de.hwrberlin.kuehlschrank.model.Einkaufslisteneintrag
-                (z, 1, "Stueck", de.hwrberlin.kuehlschrank.model.Produktkategorie.SONSTIGES));
+                new de.hwrberlin.kuehlschrank.model.Einkaufslisteneintrag(
+                    z, 1, "Stueck",
+                    de.hwrberlin.kuehlschrank.model.Produktkategorie.SONSTIGES));
         }
 
-        JOptionPane.showMessageDialog(null, fehlend.size() + " Zutaten hinzugefuegt.");
+        // Einkaufslisten-Tab sofort aktualisieren
+        if (einkaufsAnsicht != null) {
+            einkaufsAnsicht.refresh();
+        }
+
+        JOptionPane.showMessageDialog(null, fehlend.size() + " Zutat(en) zur Einkaufsliste hinzugefuegt.");
     }
 }

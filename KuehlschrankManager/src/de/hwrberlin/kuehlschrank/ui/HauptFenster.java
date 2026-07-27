@@ -26,10 +26,19 @@ public class HauptFenster {
         title.setBorder(BorderFactory.createEmptyBorder(15, 10, 15, 10));
         root.add(title, BorderLayout.NORTH);
 
+        // EinkaufslistenAnsicht zentral instanziieren, damit RezeptAnsicht
+        // und ChaosPfanneAnsicht dieselbe Instanz fuer refresh() nutzen koennen.
+        EinkaufslistenAnsicht einkaufsAnsicht =
+                new EinkaufslistenAnsicht(verwaltung, einkaufslistenService);
+
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Inhalt", new ProduktAnsicht(verwaltung).createPanel());
-        tabs.addTab("Einkaufsliste", new EinkaufslistenAnsicht(verwaltung, einkaufslistenService).createPanel());
-        tabs.addTab("Rezepte", new RezeptAnsicht(verwaltung, rezeptService, einkaufslistenService).createPanel());
+        tabs.addTab("Einkaufsliste", einkaufsAnsicht.createPanel());
+        tabs.addTab("Rezepte",
+                new RezeptAnsicht(verwaltung, rezeptService,
+                                  einkaufslistenService, einkaufsAnsicht).createPanel());
+        tabs.addTab("Chaos-Pfanne",
+                new ChaosPfanneAnsicht(verwaltung, rezeptService, einkaufsAnsicht).createPanel());
         tabs.addTab("Warnungen", new WarnungsAnsicht(verwaltung).createPanel());
 
         root.add(tabs, BorderLayout.CENTER);
