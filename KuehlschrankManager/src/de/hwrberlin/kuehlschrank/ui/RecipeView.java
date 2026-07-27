@@ -1,160 +1,340 @@
 package de.hwrberlin.kuehlschrank.ui;
 
 import de.hwrberlin.kuehlschrank.model.Recipe;
+import de.hwrberlin.kuehlschrank.model.ShoppingItem;
+import de.hwrberlin.kuehlschrank.model.ProductCategory;
 import de.hwrberlin.kuehlschrank.service.ShoppingListService;
 import de.hwrberlin.kuehlschrank.service.FridgeManager;
 import de.hwrberlin.kuehlschrank.service.RecipeService;
+import de.hwrberlin.kuehlschrank.recipe.OnlineRecipeProvider;
+import de.hwrberlin.kuehlschrank.recipe.LocalRecipeProvider;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tab "Recipes": suggests recipes and transfers missing ingredients
- * to the shopping list. Bug-fix: shopping list updates immediately.
+ * Tab "Recipes": suggests recipes from local DB or Spoonacular API.
+ * Supports online/offline toggle, card-based recipe list, ingredient
+ * availability indicators, and direct shopping list integration.
+ *
+ * Lecture 2.1.4: Runtime polymorphism – provider is swapped at runtime
+ * without changing the RecipeService interface.
  */
 public class RecipeView {
-    private final FridgeManager fridgeManager;
-    private final RecipeService recipeService;
-    private final ShoppingListService shoppingListService;
-    private final ShoppingListView shoppingView;
 
-    private DefaultListModel<String> listModel;
-    private JList<String> list;
-    private JTextArea details;
-    private List<Recipe> currentRecipes;
+    private final FridgeManager        fridgeManager;
+    private final RecipeService        recipeService;
+    private final ShoppingListService  shoppingListService;
+    private final ShoppingListView     shoppingView;
+
+    // UI state
+    private DefaultListModel<Recipe>   listModel;
+    private JList<Recipe>              recipeList;
+    private JTextArea                  detailArea;
+    private JLabel                     statusLabel;
+    private JToggleButton              onlineToggle;
+    private List<Recipe>               currentRecipes = new ArrayList<>();
+    private boolean                    onlineMode     = false;
 
     public RecipeView(FridgeManager fm, RecipeService rs,
                       ShoppingListService sl, ShoppingListView sv) {
-        this.fridgeManager = fm;
-        this.recipeService = rs;
+        this.fridgeManager       = fm;
+        this.recipeService       = rs;
         this.shoppingListService = sl;
-        this.shoppingView = sv;
+        this.shoppingView        = sv;
     }
 
+    // -------------------------------------------------------------------------
+    // Public entry point
+    // -------------------------------------------------------------------------
+
     public JPanel createPanel() {
-        JPanel root = new JPanel(new BorderLayout(0, 12));
+        JPanel root = new JPanel(new BorderLayout(0, 0));
         root.setBackground(SmartFridgeApp.BG_DARK);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        listModel = new DefaultListModel<>();
-        list  = new JList<>(listModel);
-        list.setBackground(SmartFridgeApp.BG_CARD);
-        list.setForeground(SmartFridgeApp.TEXT_PRIMARY);
-        list.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        list.setFixedCellHeight(40);
-        list.setSelectionBackground(new Color(99, 179, 122, 50));
-        list.setSelectionForeground(SmartFridgeApp.ACCENT);
-        list.setCellRenderer(new RecipeListRenderer());
-        list.addListSelectionListener(e -> { if (!e.getValueIsAdjusting()) showDetails(); });
-
-        JScrollPane listScroll = UiHelper.scrollPane(list);
-        listScroll.setBorder(BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1, true));
-
-        JPanel leftPanel = new JPanel(new BorderLayout(0, 8));
-        leftPanel.setOpaque(false);
-        leftPanel.setPreferredSize(new Dimension(270, 0));
-        leftPanel.add(UiHelper.sectionLabel("\uD83D\uDCD6  Suggestions"), BorderLayout.NORTH);
-        leftPanel.add(listScroll, BorderLayout.CENTER);
-
-        details = new JTextArea();
-        details.setEditable(false);
-        details.setLineWrap(true);
-        details.setWrapStyleWord(true);
-        details.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        details.setBackground(SmartFridgeApp.BG_CARD);
-        details.setForeground(SmartFridgeApp.TEXT_PRIMARY);
-        details.setCaretColor(SmartFridgeApp.ACCENT);
-        details.setBorder(new EmptyBorder(16, 16, 16, 16));
-        details.setText("Click \"Suggest recipes\" to find matching recipes\nfor your fridge contents.");
-
-        JScrollPane detailScroll = UiHelper.scrollPane(details);
-        detailScroll.setBorder(BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1, true));
-
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, detailScroll);
-        split.setDividerLocation(270);
-        split.setDividerSize(6);
-        split.setBackground(SmartFridgeApp.BG_DARK);
-        split.setBorder(null);
-
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        btnRow.setOpaque(false);
-        JButton searchBtn = UiHelper.accentButton("\uD83D\uDD0D  Suggest recipes");
-        JButton toListBtn = UiHelper.ghostButton("\uD83D\uDED2  Add missing ingredients to shopping list");
-        searchBtn.addActionListener(e -> searchRecipes());
-        toListBtn.addActionListener(e -> addMissingToShoppingList());
-        btnRow.add(searchBtn);
-        btnRow.add(toListBtn);
-
-        root.add(btnRow, BorderLayout.NORTH);
-        root.add(split, BorderLayout.CENTER);
+        root.add(buildToolbar(),    BorderLayout.NORTH);
+        root.add(buildSplitArea(),  BorderLayout.CENTER);
         return root;
     }
 
-    private void searchRecipes() {
-        currentRecipes = recipeService.suggestRecipes(fridgeManager);
+    // -------------------------------------------------------------------------
+    // Toolbar
+    // -------------------------------------------------------------------------
+
+    private JPanel buildToolbar() {
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
+        bar.setBorder(new EmptyBorder(0, 0, 12, 0));
+
+        // Left: action buttons
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+
+        JButton searchBtn  = UiHelper.accentButton("\uD83D\uDD0D  Suggest Recipes");
+        JButton addListBtn = UiHelper.ghostButton("\uD83D\uDED2  Add Missing to Shopping List");
+        searchBtn .addActionListener(e -> searchRecipes());
+        addListBtn.addActionListener(e -> addMissingToShoppingList());
+        left.add(searchBtn);
+        left.add(addListBtn);
+
+        // Right: online toggle + status
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+
+        onlineToggle = buildOnlineToggle();
+        statusLabel  = new JLabel("\uD83D\uDFE1  Offline mode");
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        right.add(statusLabel);
+        right.add(onlineToggle);
+
+        bar.add(left,  BorderLayout.WEST);
+        bar.add(right, BorderLayout.EAST);
+        return bar;
+    }
+
+    private JToggleButton buildOnlineToggle() {
+        JToggleButton btn = new JToggleButton("Online") {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                    RenderingHints.VALUE_ANTIALIAS_ON);
+                Color bg = isSelected()
+                        ? new Color(99, 179, 122, 200)
+                        : SmartFridgeApp.BG_HOVER;
+                g2.setColor(bg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(isSelected()
+                        ? SmartFridgeApp.ACCENT
+                        : SmartFridgeApp.BORDER);
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 20, 20);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(6, 14, 6, 14));
+        btn.setSelected(false);
+        btn.addActionListener(e -> toggleOnlineMode(btn.isSelected()));
+        return btn;
+    }
+
+    private void toggleOnlineMode(boolean online) {
+        onlineMode = online;
+        if (online) {
+            recipeService.setProvider(new OnlineRecipeProvider());
+            statusLabel.setText("\uD83D\uDFE2  Online \u2013 Spoonacular API");
+            statusLabel.setForeground(SmartFridgeApp.ACCENT);
+            onlineToggle.setText("Online  \u2713");
+        } else {
+            recipeService.setProvider(new LocalRecipeProvider());
+            statusLabel.setText("\uD83D\uDFE1  Offline mode");
+            statusLabel.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+            onlineToggle.setText("Online");
+        }
         listModel.clear();
-        for (Recipe r : currentRecipes)
-            listModel.addElement(r.getName() + " (" + r.getPreparationTime() + ")");
-        details.setText(currentRecipes.isEmpty()
-                ? "No matching recipes found."
-                : "Please select a recipe on the left.");
+        detailArea.setText("Provider switched. Click \"Suggest Recipes\" to search.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Split area: recipe list (left) + detail panel (right)
+    // -------------------------------------------------------------------------
+
+    private JSplitPane buildSplitArea() {
+        // --- Left: recipe card list ---
+        listModel  = new DefaultListModel<>();
+        recipeList = new JList<>(listModel);
+        recipeList.setBackground(SmartFridgeApp.BG_DARK);
+        recipeList.setFixedCellHeight(72);
+        recipeList.setCellRenderer(new RecipeCardRenderer());
+        recipeList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) showDetails();
+        });
+
+        JScrollPane listScroll = UiHelper.scrollPane(recipeList);
+        listScroll.setBorder(BorderFactory.createLineBorder(
+                SmartFridgeApp.BORDER, 1, true));
+
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 8));
+        leftPanel.setOpaque(false);
+        leftPanel.setPreferredSize(new Dimension(300, 0));
+        leftPanel.add(UiHelper.sectionLabel("\uD83D\uDCD6  Recipes"), BorderLayout.NORTH);
+        leftPanel.add(listScroll, BorderLayout.CENTER);
+
+        // --- Right: detail panel ---
+        JPanel rightPanel = buildDetailPanel();
+
+        JSplitPane split = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        split.setDividerLocation(300);
+        split.setDividerSize(6);
+        split.setBackground(SmartFridgeApp.BG_DARK);
+        split.setBorder(null);
+        return split;
+    }
+
+    private JPanel buildDetailPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(0, 12, 0, 0));
+
+        detailArea = new JTextArea();
+        detailArea.setEditable(false);
+        detailArea.setLineWrap(true);
+        detailArea.setWrapStyleWord(true);
+        detailArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        detailArea.setBackground(SmartFridgeApp.BG_CARD);
+        detailArea.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        detailArea.setBorder(new EmptyBorder(16, 16, 16, 16));
+        detailArea.setText("Click \"Suggest Recipes\" to find matching recipes\nfor your current fridge contents.");
+
+        JScrollPane detailScroll = UiHelper.scrollPane(detailArea);
+        detailScroll.setBorder(BorderFactory.createLineBorder(
+                SmartFridgeApp.BORDER, 1, true));
+
+        panel.add(UiHelper.sectionLabel("\uD83D\uDCC4  Details"), BorderLayout.NORTH);
+        panel.add(detailScroll, BorderLayout.CENTER);
+        return panel;
+    }
+
+    // -------------------------------------------------------------------------
+    // Actions
+    // -------------------------------------------------------------------------
+
+    private void searchRecipes() {
+        detailArea.setText("\uD83D\uDD04  Searching" +
+                (onlineMode ? " (Spoonacular API)" : " (local database)") + "...");
+        listModel.clear();
+
+        // Run in background so the UI does not freeze during API calls
+        SwingWorker<List<Recipe>, Void> worker = new SwingWorker<>() {
+            @Override protected List<Recipe> doInBackground() {
+                return recipeService.suggestRecipes(fridgeManager);
+            }
+            @Override protected void done() {
+                try {
+                    currentRecipes = get();
+                    for (Recipe r : currentRecipes) listModel.addElement(r);
+                    detailArea.setText(currentRecipes.isEmpty()
+                            ? "No matching recipes found. Try adding more products to your fridge."
+                            : "Select a recipe on the left to see details.");
+                } catch (Exception ex) {
+                    detailArea.setText("\u26A0 Error: " + ex.getCause().getMessage() +
+                            "\n\nTip: Switch to Offline mode if the API is unavailable.");
+                }
+            }
+        };
+        worker.execute();
     }
 
     private void showDetails() {
-        int idx = list.getSelectedIndex();
+        int idx = recipeList.getSelectedIndex();
         if (idx < 0 || currentRecipes == null || idx >= currentRecipes.size()) return;
         Recipe r = currentRecipes.get(idx);
+
         StringBuilder sb = new StringBuilder();
-        sb.append("Recipe: ").append(r.getName()).append("\n\n");
-        sb.append("Description:\n").append(r.getDescription()).append("\n\n");
+        sb.append("\uD83C\uDF73  ").append(r.getName()).append("\n");
+        sb.append("\u23F1  ").append(r.getPreparationTime()).append("\n");
+        if (r.getSource() != null && !r.getSource().isBlank())
+            sb.append("\uD83D\uDD17  ").append(r.getSource()).append("\n");
+        sb.append("\n");
+
+        if (!r.getDescription().isBlank()) {
+            sb.append("Instructions:\n").append(r.getDescription()).append("\n\n");
+        }
+
         sb.append("Ingredients:\n");
         for (String ingredient : r.getIngredients()) {
-            boolean available = fridgeManager.findProduct(ingredient) != null;
-            sb.append(available ? "  \u2713 " : "  \u2717 ").append(ingredient)
-              .append(available ? "  (available)" : "  (missing)").append("\n");
+            boolean have = fridgeManager.findProduct(ingredient) != null;
+            sb.append(have ? "  \u2705  " : "  \uD83D\uDECD  ")
+              .append(ingredient)
+              .append(have ? "" : "  \u2190 missing")
+              .append("\n");
         }
-        details.setText(sb.toString());
-        details.setCaretPosition(0);
+
+        detailArea.setText(sb.toString());
+        detailArea.setCaretPosition(0);
     }
 
-    /** Bug-fix: adds missing ingredients to the shopping list and refreshes the UI immediately. */
     private void addMissingToShoppingList() {
-        int idx = list.getSelectedIndex();
+        int idx = recipeList.getSelectedIndex();
         if (idx < 0 || currentRecipes == null || idx >= currentRecipes.size()) {
-            JOptionPane.showMessageDialog(null, "Please select a recipe first.");
+            JOptionPane.showMessageDialog(null,
+                    "Please select a recipe first.",
+                    "No recipe selected", JOptionPane.WARNING_MESSAGE);
             return;
         }
         Recipe r = currentRecipes.get(idx);
         List<String> missing = recipeService.getMissingIngredients(r, fridgeManager);
+        if (missing.isEmpty()) {
+            JOptionPane.showMessageDialog(null,
+                    "\u2705 You already have all ingredients for this recipe!",
+                    "Nothing missing", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         for (String ingredient : missing) {
             shoppingListService.addItem(
-                new de.hwrberlin.kuehlschrank.model.ShoppingItem(
-                    ingredient, 1, "pcs",
-                    de.hwrberlin.kuehlschrank.model.ProductCategory.OTHER));
+                    new ShoppingItem(ingredient, 1, "pcs", ProductCategory.OTHER));
         }
-        // Bug-fix: refresh shopping list view immediately
         if (shoppingView != null) shoppingView.refresh();
         JOptionPane.showMessageDialog(null,
-                missing.size() + " ingredient(s) added to the shopping list.");
+                "\uD83D\uDED2  " + missing.size() + " ingredient(s) added to shopping list:"
+                + "\n" + String.join(", ", missing),
+                "Shopping list updated", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private static class RecipeListRenderer extends DefaultListCellRenderer {
+    // -------------------------------------------------------------------------
+    // Custom cell renderer – recipe cards
+    // -------------------------------------------------------------------------
+
+    private class RecipeCardRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(
                 JList<?> list, Object value, int index,
                 boolean isSelected, boolean cellHasFocus) {
-            JLabel lbl = (JLabel) super.getListCellRendererComponent(
-                    list, value, index, isSelected, cellHasFocus);
-            lbl.setBackground(isSelected
-                    ? new Color(99, 179, 122, 50)
-                    : (index % 2 == 0 ? SmartFridgeApp.BG_CARD : SmartFridgeApp.BG_HOVER));
-            lbl.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
-            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            lbl.setBorder(new EmptyBorder(0, 16, 0, 16));
-            lbl.setOpaque(true);
-            return lbl;
+
+            Recipe r = (Recipe) value;
+            JPanel card = new JPanel(new BorderLayout(8, 2));
+            card.setOpaque(true);
+            card.setBackground(isSelected ? SmartFridgeApp.BG_HOVER : SmartFridgeApp.BG_CARD);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, isSelected ? 3 : 0, 0, 0,
+                            isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.BG_CARD),
+                    new EmptyBorder(10, 14, 10, 14)));
+
+            JLabel name = new JLabel("\uD83C\uDF73  " + r.getName());
+            name.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            name.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
+
+            // Count how many ingredients are available
+            long have = r.getIngredients().stream()
+                    .filter(i -> fridgeManager.findProduct(i) != null).count();
+            int  total = r.getIngredients().size();
+            String ratio = have + "/" + total + " ingredients";
+            Color ratioColor = have == total ? SmartFridgeApp.ACCENT
+                             : have > 0      ? SmartFridgeApp.ACCENT_WARN
+                             : SmartFridgeApp.ACCENT_DANGER;
+
+            JLabel meta = new JLabel("\u23F1 " + r.getPreparationTime()
+                    + "   \uD83D\uDED2 " + ratio);
+            meta.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            meta.setForeground(ratioColor);
+
+            card.add(name, BorderLayout.CENTER);
+            card.add(meta, BorderLayout.SOUTH);
+            return card;
         }
     }
 }

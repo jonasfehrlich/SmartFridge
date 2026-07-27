@@ -6,7 +6,7 @@ import java.util.*;
 /**
  * Service class for recipe suggestions and the Chaos Pan feature.
  * Lecture 2.1.3: Polymorphism via the RecipeProvider interface.
- * Lecture 2.1.4: late binding – the provider is decided at runtime.
+ * Lecture 2.1.4: Late binding – the provider is decided at runtime.
  */
 public class RecipeService {
     private RecipeProvider provider;
@@ -18,6 +18,12 @@ public class RecipeService {
 
     /** Test constructor: inject any RecipeProvider implementation directly (e.g. a stub). */
     public RecipeService(RecipeProvider provider) { this.provider = provider; }
+
+    /**
+     * Switches the active provider at runtime (e.g. when the user toggles
+     * Online/Offline in the UI). Lecture 2.1.4: late binding.
+     */
+    public void setProvider(RecipeProvider provider) { this.provider = provider; }
 
     /**
      * Returns recipe suggestions prioritising soon-to-expire products (chaos mode).
