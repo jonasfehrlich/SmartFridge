@@ -17,22 +17,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for RecipeService.
- * Uses a stub RecipeProvider (no real HTTP calls).
+ * Uses a stub RecipeProvider so no real HTTP calls are made.
  * Covers: suggestRecipes, getMissingIngredients, createChaosPan, getProviderName.
+ *
+ * Recipe constructor: Recipe(name, description, ingredients, preparationTime, source)
  */
 class RecipeServiceTest {
 
-    /** Stub provider: returns fixed recipes regardless of input. */
+    /** Stub: always returns two fixed recipes regardless of the ingredient list. */
     private static class StubRecipeProvider implements RecipeProvider {
         @Override
         public List<Recipe> findRecipes(List<String> ingredients) {
             return Arrays.asList(
-                new Recipe("Veggie Pan",
+                new Recipe("Veggie Pan", "Quick vegetable stir-fry.",
                         Arrays.asList("Carrot", "Zucchini", "Olive Oil"),
-                        "Fry all vegetables in olive oil.", "stub"),
-                new Recipe("Milk Soup",
+                        "15 min", "stub"),
+                new Recipe("Milk Soup", "Creamy potato soup.",
                         Arrays.asList("Milk", "Potato"),
-                        "Boil potatoes in milk.", "stub")
+                        "20 min", "stub")
             );
         }
         @Override
@@ -46,13 +48,15 @@ class RecipeServiceTest {
     void setUp() {
         recipeService = new RecipeService(new StubRecipeProvider());
         manager = new FridgeManager();
-        // Expires in 3 days -> appears in chaos pan (threshold = 5)
-        manager.addProduct(new Product("Carrot", ProductCategory.VEGETABLE,
+        // Carrot expires in 3 days -> within chaos-pan threshold of 5
+        manager.addProduct(new Product("Carrot", ProductCategory.FRUITS_VEGETABLES,
                 0.3, "kg", LocalDate.now().plusDays(3), 0.1));
-        // Fresh -> not prioritised in chaos pan
+        // Milk is fresh (14 days) -> not prioritised in chaos pan
         manager.addProduct(new Product("Milk", ProductCategory.DAIRY,
                 2.0, "L", LocalDate.now().plusDays(14), 1.0));
     }
+
+    // ---- suggestRecipes ----
 
     @Test
     void suggestRecipes_returnsNonEmptyList() {
@@ -60,10 +64,12 @@ class RecipeServiceTest {
     }
 
     @Test
-    void suggestRecipes_returnsRecipesFromProvider() {
+    void suggestRecipes_containsVeggiePan() {
         assertTrue(recipeService.suggestRecipes(manager).stream()
                 .anyMatch(r -> r.getName().equals("Veggie Pan")));
     }
+
+    // ---- createChaosPan ----
 
     @Test
     void createChaosPan_returnsRecipes_whenExpiringSoonExists() {
@@ -73,16 +79,19 @@ class RecipeServiceTest {
     @Test
     void createChaosPan_returnsEmptyList_whenNothingExpiresSoon() {
         FridgeManager fresh = new FridgeManager();
-        fresh.addProduct(new Product("Apple", ProductCategory.FRUIT,
+        fresh.addProduct(new Product("Apple", ProductCategory.FRUITS_VEGETABLES,
                 1.0, "kg", LocalDate.now().plusDays(30), 0.5));
         assertTrue(recipeService.createChaosPan(fresh).isEmpty());
     }
 
+    // ---- getMissingIngredients ----
+
     @Test
     void getMissingIngredients_returnsOnlyMissingOnes() {
-        Recipe recipe = new Recipe("Veggie Pan",
+        // Fridge has: Carrot, Milk. Recipe needs: Carrot, Zucchini, Olive Oil.
+        Recipe recipe = new Recipe("Veggie Pan", "Stir-fry.",
                 Arrays.asList("Carrot", "Zucchini", "Olive Oil"),
-                "Fry all vegetables.", "test");
+                "15 min", "test");
         List<String> missing = recipeService.getMissingIngredients(recipe, manager);
         assertFalse(missing.contains("Carrot"));
         assertTrue(missing.contains("Zucchini"));
@@ -91,11 +100,13 @@ class RecipeServiceTest {
 
     @Test
     void getMissingIngredients_returnsEmptyList_whenAllPresent() {
-        Recipe recipe = new Recipe("Simple",
+        Recipe recipe = new Recipe("Simple", "Mix.",
                 Arrays.asList("Carrot", "Milk"),
-                "Mix together.", "test");
+                "5 min", "test");
         assertTrue(recipeService.getMissingIngredients(recipe, manager).isEmpty());
     }
+
+    // ---- getProviderName ----
 
     @Test
     void getProviderName_returnsStubProviderName() {

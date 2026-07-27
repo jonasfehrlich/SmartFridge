@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for FridgeManager.
- * Covers: addProduct, removeProduct, findProduct, getAllProducts,
+ * Covers: addProduct, removeProduct, findProduct (case-insensitive), getAllProducts,
  *         getProductsByCategory, getExpiringSoon, getExpiredProducts,
- *         getProductsNeedingRestock, FridgeException on null input.
+ *         getProductsNeedingRestock, getProductCount, FridgeException on null.
  */
 class FridgeManagerTest {
 
@@ -28,12 +28,14 @@ class FridgeManagerTest {
     @BeforeEach
     void setUp() {
         manager    = new FridgeManager();
-        milk       = new Product("Milk",    ProductCategory.DAIRY,    2.0, "L",  LocalDate.now().plusDays(4),   1.0);
-        carrot     = new Product("Carrot",  ProductCategory.VEGETABLE, 0.3, "kg", LocalDate.now().plusDays(14), 0.5);
-        oldYoghurt = new Product("Yoghurt", ProductCategory.DAIRY,    0.2, "kg", LocalDate.now().minusDays(2), 0.5);
+        milk       = new Product("Milk",    ProductCategory.DAIRY,           2.0, "L",  LocalDate.now().plusDays(4),   1.0);
+        carrot     = new Product("Carrot",  ProductCategory.FRUITS_VEGETABLES, 0.3, "kg", LocalDate.now().plusDays(14), 0.5);
+        oldYoghurt = new Product("Yoghurt", ProductCategory.DAIRY,           0.2, "kg", LocalDate.now().minusDays(2), 0.5);
         manager.addProduct(milk);
         manager.addProduct(carrot);
     }
+
+    // ---- addProduct / findProduct ----
 
     @Test
     void addProduct_canBeFoundByName() {
@@ -56,6 +58,8 @@ class FridgeManagerTest {
         assertNull(manager.findProduct("Butter"));
     }
 
+    // ---- removeProduct ----
+
     @Test
     void removeProduct_existingProduct_returnsTrue() {
         assertTrue(manager.removeProduct("Milk"));
@@ -67,10 +71,19 @@ class FridgeManagerTest {
         assertFalse(manager.removeProduct("Butter"));
     }
 
+    // ---- getAllProducts / getProductCount ----
+
     @Test
     void getAllProducts_returnsAllAddedProducts() {
         assertEquals(2, manager.getAllProducts().size());
     }
+
+    @Test
+    void getProductCount_matchesAddedProducts() {
+        assertEquals(2, manager.getProductCount());
+    }
+
+    // ---- getProductsByCategory ----
 
     @Test
     void getProductsByCategory_returnsOnlyMatchingCategory() {
@@ -81,45 +94,59 @@ class FridgeManagerTest {
 
     @Test
     void getProductsByCategory_emptyWhenNoneMatch() {
-        assertTrue(manager.getProductsByCategory(ProductCategory.MEAT).isEmpty());
+        assertTrue(manager.getProductsByCategory(ProductCategory.MEDICATION).isEmpty());
     }
+
+    // ---- getExpiringSoon ----
 
     @Test
     void getExpiringSoon_includesMilk_within5Days() {
-        assertTrue(manager.getExpiringSoon(5).stream().anyMatch(p -> p.getName().equals("Milk")));
+        assertTrue(manager.getExpiringSoon(5).stream()
+                .anyMatch(p -> p.getName().equals("Milk")));
     }
 
     @Test
     void getExpiringSoon_excludesCarrot_beyond5Days() {
-        assertTrue(manager.getExpiringSoon(5).stream().noneMatch(p -> p.getName().equals("Carrot")));
+        assertTrue(manager.getExpiringSoon(5).stream()
+                .noneMatch(p -> p.getName().equals("Carrot")));
     }
 
     @Test
     void getExpiringSoon_returnsEmptyList_whenNothingExpiresSoon() {
         FridgeManager fresh = new FridgeManager();
-        fresh.addProduct(new Product("Apple", ProductCategory.FRUIT, 1.0, "kg",
-                LocalDate.now().plusDays(30), 0.5));
+        fresh.addProduct(new Product("Apple", ProductCategory.FRUITS_VEGETABLES,
+                1.0, "kg", LocalDate.now().plusDays(30), 0.5));
         assertTrue(fresh.getExpiringSoon(5).isEmpty());
     }
+
+    // ---- getExpiredProducts ----
 
     @Test
     void getExpiredProducts_returnsExpiredItems() {
         manager.addProduct(oldYoghurt);
-        assertTrue(manager.getExpiredProducts().stream().anyMatch(p -> p.getName().equals("Yoghurt")));
+        assertTrue(manager.getExpiredProducts().stream()
+                .anyMatch(p -> p.getName().equals("Yoghurt")));
     }
 
     @Test
     void getExpiredProducts_excludesFreshItems() {
-        assertTrue(manager.getExpiredProducts().stream().noneMatch(p -> p.getName().equals("Milk")));
+        assertTrue(manager.getExpiredProducts().stream()
+                .noneMatch(p -> p.getName().equals("Milk")));
     }
+
+    // ---- getProductsNeedingRestock ----
 
     @Test
     void getProductsNeedingRestock_includesCarrot_belowMinimum() {
-        assertTrue(manager.getProductsNeedingRestock().stream().anyMatch(p -> p.getName().equals("Carrot")));
+        // carrot: 0.3 < 0.5 minimum -> needsRestock() == true
+        assertTrue(manager.getProductsNeedingRestock().stream()
+                .anyMatch(p -> p.getName().equals("Carrot")));
     }
 
     @Test
     void getProductsNeedingRestock_excludesMilk_aboveMinimum() {
-        assertTrue(manager.getProductsNeedingRestock().stream().noneMatch(p -> p.getName().equals("Milk")));
+        // milk: 2.0 >= 1.0 minimum -> needsRestock() == false
+        assertTrue(manager.getProductsNeedingRestock().stream()
+                .noneMatch(p -> p.getName().equals("Milk")));
     }
 }

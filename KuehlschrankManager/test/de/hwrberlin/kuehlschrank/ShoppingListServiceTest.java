@@ -26,13 +26,15 @@ class ShoppingListServiceTest {
     void setUp() {
         shoppingListService = new ShoppingListService();
         manager = new FridgeManager();
-        // carrot: 0.2 < 0.5 minimum -> needs restock
-        manager.addProduct(new Product("Carrot", ProductCategory.VEGETABLE,
+        // carrot: 0.2 kg < 0.5 minimum -> needsRestock() -> appears in generated list
+        manager.addProduct(new Product("Carrot", ProductCategory.FRUITS_VEGETABLES,
                 0.2, "kg", LocalDate.now().plusDays(5), 0.5));
-        // milk: 2.0 >= 1.0 minimum -> no restock needed
+        // milk: 2.0 L >= 1.0 minimum -> no restock needed
         manager.addProduct(new Product("Milk", ProductCategory.DAIRY,
                 2.0, "L", LocalDate.now().plusDays(7), 1.0));
     }
+
+    // ---- generateList ----
 
     @Test
     void generateList_addsCarrot_notMilk() {
@@ -52,9 +54,12 @@ class ShoppingListServiceTest {
         assertEquals(1, count);
     }
 
+    // ---- addItem ----
+
     @Test
     void addItem_addsNewItem_successfully() {
-        shoppingListService.addItem(new ShoppingItem("Butter", 1.0, "pack", ProductCategory.DAIRY));
+        shoppingListService.addItem(
+                new ShoppingItem("Butter", 1.0, "pack", ProductCategory.DAIRY));
         assertEquals(1, shoppingListService.getItems().size());
     }
 
@@ -65,6 +70,8 @@ class ShoppingListServiceTest {
         shoppingListService.addItem(item);
         assertEquals(1, shoppingListService.getItems().size());
     }
+
+    // ---- markAsPurchased ----
 
     @Test
     void markAsPurchased_returnsTrue_forExistingItem() {
@@ -83,10 +90,13 @@ class ShoppingListServiceTest {
         assertTrue(shoppingListService.markAsPurchased("carrot"));
     }
 
+    // ---- removePurchased ----
+
     @Test
     void removePurchased_removesOnlyPurchasedItems() {
         shoppingListService.generateList(manager);
-        shoppingListService.addItem(new ShoppingItem("Butter", 1.0, "pack", ProductCategory.DAIRY));
+        shoppingListService.addItem(
+                new ShoppingItem("Butter", 1.0, "pack", ProductCategory.DAIRY));
         shoppingListService.markAsPurchased("Carrot");
         shoppingListService.removePurchased();
         assertTrue(shoppingListService.getItems().stream()
@@ -94,6 +104,8 @@ class ShoppingListServiceTest {
         assertTrue(shoppingListService.getItems().stream()
                 .anyMatch(i -> i.getProductName().equals("Butter")));
     }
+
+    // ---- getOpenItems ----
 
     @Test
     void getOpenItems_excludesPurchasedItems() {

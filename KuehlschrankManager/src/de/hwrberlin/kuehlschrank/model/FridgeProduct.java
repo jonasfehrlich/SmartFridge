@@ -17,8 +17,8 @@ public class FridgeProduct extends Product implements Serializable {
         this.storageLocation = storageLocation;
     }
 
-    public String getStorageLocation()          { return storageLocation; }
-    public void setStorageLocation(String l)    { this.storageLocation = l; }
+    public String getStorageLocation()       { return storageLocation; }
+    public void setStorageLocation(String l) { this.storageLocation = l; }
 
     @Override
     public String toString() { return super.toString() + " [" + storageLocation + "]"; }
