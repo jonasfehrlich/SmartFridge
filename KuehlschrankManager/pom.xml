@@ -28,6 +28,13 @@
             <version>2.11.0</version>
         </dependency>
 
+        <!-- FlatLaf - Modern Swing Look & Feel -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.4.1</version>
+        </dependency>
+
         <!-- JUnit 5 - Unit Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
