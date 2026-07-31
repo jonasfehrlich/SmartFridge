@@ -6,7 +6,7 @@ import de.hwrberlin.kuehlschrank.model.ProductCategory;
 import de.hwrberlin.kuehlschrank.service.ShoppingListService;
 import de.hwrberlin.kuehlschrank.service.FridgeManager;
 import de.hwrberlin.kuehlschrank.service.RecipeService;
-import de.hwrberlin.kuehlschrank.recipe.OnlineRecipeProvider;
+import de.hwrberlin.kuehlschrank.recipe.SpoonacularRecipeProvider;
 import de.hwrberlin.kuehlschrank.recipe.LocalRecipeProvider;
 
 import javax.swing.*;
@@ -134,7 +134,7 @@ public class RecipeView {
     private void toggleOnlineMode(boolean online) {
         onlineMode = online;
         if (online) {
-            recipeService.setProvider(new OnlineRecipeProvider());
+        	recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
             statusLabel.setText("\uD83D\uDFE2  Online \u2013 Spoonacular API");
             statusLabel.setForeground(SmartFridgeApp.ACCENT);
             onlineToggle.setText("Online  \u2713");
@@ -257,7 +257,7 @@ public class RecipeView {
 
         sb.append("Ingredients:\n");
         for (String ingredient : r.getIngredients()) {
-            boolean have = fridgeManager.findProduct(ingredient) != null;
+        	boolean have = fridgeManager.containsIngredient(ingredient);
             sb.append(have ? "  \u2705  " : "  \uD83D\uDECD  ")
               .append(ingredient)
               .append(have ? "" : "  \u2190 missing")
@@ -320,7 +320,7 @@ public class RecipeView {
 
             // Count how many ingredients are available
             long have = r.getIngredients().stream()
-                    .filter(i -> fridgeManager.findProduct(i) != null).count();
+                    .filter(fridgeManager::containsIngredient).count();
             int  total = r.getIngredients().size();
             String ratio = have + "/" + total + " ingredients";
             Color ratioColor = have == total ? SmartFridgeApp.ACCENT

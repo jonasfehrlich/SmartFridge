@@ -9,12 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import de.hwrberlin.kuehlschrank.util.APIException;
 import de.hwrberlin.kuehlschrank.util.DataStorage;
 import de.hwrberlin.kuelschrank.api.model.Ingredient;
 import de.hwrberlin.kuelschrank.api.model.RecipeDetails;
 import de.hwrberlin.kuehlschrank.model.*;
+import de.hwrberlin.kuelschrank.api.model.SpoonacularSearchResult;
 
 /**
  * HTTP client for the Spoonacular Recipe API.
@@ -43,7 +46,8 @@ public class RecipeAPIClient {
      * @return list of matching RecipeSearchResult objects
      * @throws APIException if the HTTP request fails or is interrupted
      */
-    public List<RecipeSearchResult> searchRecipes(List<FridgeProduct> products, int count) {
+    public List<RecipeSearchResult> searchRecipes(List<FridgeProduct> products,int count) {
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(buildUri(products, count)))
                 .GET()
@@ -51,16 +55,82 @@ public class RecipeAPIClient {
 
         try {
             HttpResponse<String> response = httpClient.send(
-                    request, HttpResponse.BodyHandlers.ofString());
+                    request,
+                    HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                throw new APIException(
+                        "Recipe API returned HTTP status "
+                                + response.statusCode());
+            }
+
             String json = response.body();
-            Type type = new TypeToken<List<RecipeSearchResult>>() {}.getType();
-            return DataStorage.fromJson(json, type);
+
+            Type type =
+                    new TypeToken<List<SpoonacularSearchResult>>() {}.getType();
+
+            List<SpoonacularSearchResult> apiResults =
+                    DataStorage.fromJson(json, type);
+
+            List<RecipeSearchResult> results = new ArrayList<>();
+
+            if (apiResults == null) {
+                return results;
+            }
+
+            for (SpoonacularSearchResult apiResult : apiResults) {
+
+                List<String> usedIngredients =
+                        convertIngredients(apiResult.getUsedIngredients());
+
+                List<String> missedIngredients =
+                        convertIngredients(apiResult.getMissedIngredients());
+
+                RecipeSearchResult result = new RecipeSearchResult(
+                        apiResult.getId(),
+                        apiResult.getTitle(),
+                        usedIngredients,
+                        missedIngredients
+                );
+
+                results.add(result);
+            }
+
+            return results;
+
         } catch (IOException e) {
-            throw new APIException("Could not connect to the Recipe API.", e);
+            throw new APIException(
+                    "Could not connect to the Recipe API.", e);
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new APIException("Connection to the Recipe API was interrupted.", e);
+
+            throw new APIException(
+                    "Connection to the Recipe API was interrupted.", e);
         }
+    }
+    private List<String> convertIngredients(
+            List<Ingredient> ingredients) {
+
+        List<String> names = new ArrayList<>();
+
+        if (ingredients == null) {
+            return names;
+        }
+
+        for (Ingredient ingredient : ingredients) {
+            if (ingredient == null) {
+                continue;
+            }
+
+            String name = ingredient.getDisplayName();
+
+            if (!name.isBlank()) {
+                names.add(name);
+            }
+        }
+
+        return names;
     }
 
     /**
@@ -100,9 +170,16 @@ public class RecipeAPIClient {
     }
 
     private String buildUri(List<FridgeProduct> products, int count) {
+    	String ingredients = buildIngredientList(products);
+
+        String encodedIngredients = URLEncoder.encode(
+                ingredients,
+                StandardCharsets.UTF_8
+        );
+
         return baseUrl
                 + "/recipes/findByIngredients"
-                + "?ingredients=" + buildIngredientList(products)
+                + "?ingredients=" + encodedIngredients
                 + "&number=" + count
                 + "&apiKey=" + apiKey;
     }

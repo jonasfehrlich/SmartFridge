@@ -11,9 +11,9 @@ import java.util.*;
 public class RecipeService {
     private RecipeProvider provider;
 
-    /** Production constructor: chooses online or local provider automatically. */
+    /** Production constructor: starts with the local recipe provider. */
     public RecipeService(boolean onlineMode) {
-        this.provider = onlineMode ? new OnlineRecipeProvider() : new LocalRecipeProvider();
+        this.provider = new LocalRecipeProvider();
     }
 
     /** Test constructor: inject any RecipeProvider implementation directly (e.g. a stub). */

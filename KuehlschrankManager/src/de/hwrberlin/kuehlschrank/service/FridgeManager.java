@@ -87,4 +87,21 @@ public class FridgeManager implements Serializable {
         FridgeManager m = DataStorage.load(FILE, FridgeManager.class);
         return m != null ? m : new FridgeManager();
     }
+    public boolean containsIngredient(String recipeIngredient) {
+        if (recipeIngredient == null || recipeIngredient.isBlank()) {
+            return false;
+        }
+
+        String normalizedIngredient = recipeIngredient.toLowerCase();
+
+        for (Product product : products.values()) {
+            String productName = product.getName().toLowerCase();
+
+            if (normalizedIngredient.contains(productName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
