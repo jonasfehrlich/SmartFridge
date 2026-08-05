@@ -46,7 +46,7 @@ public class ShoppingListView {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton genBtn     = UiHelper.accentButton("\uD83D\uDD04  Regenerate list");
+        JButton genBtn     = UiHelper.accentButton("\uD83D\uDD04  Update list");
         JButton buyBtn     = UiHelper.ghostButton("\u2713  Mark as purchased");
         JButton cleanBtn   = UiHelper.ghostButton("\uD83E\uDDF9  Remove purchased");
         JButton addBtn     = UiHelper.ghostButton("+ Add manually");

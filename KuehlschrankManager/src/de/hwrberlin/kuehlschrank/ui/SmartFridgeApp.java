@@ -9,6 +9,8 @@ import de.hwrberlin.kuehlschrank.service.RecipeService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 /**
  * Entry point of the SmartFridge application.
@@ -94,8 +96,24 @@ public class SmartFridgeApp {
             // App icon (green fridge emoji rendered as icon)
             frame.setIconImage(createAppIcon());
 
-            frame.setContentPane(
-                new MainWindow(fridgeManager, shoppingListService, recipeService).createPanel());
+            MainWindow mainWindow = new MainWindow(
+                    fridgeManager,
+                    shoppingListService,
+                    recipeService);
+
+            frame.setContentPane(mainWindow.createPanel());
+            frame.addWindowListener(new WindowAdapter() {
+
+                @Override
+                public void windowClosing(WindowEvent e) {
+
+                    boolean savedSuccessfully = mainWindow.saveData();
+
+                    if (savedSuccessfully) {
+                        frame.dispose();
+                    }
+                }
+            });
             frame.setSize(1200, 820);
             frame.setMinimumSize(new Dimension(960, 640));
             frame.setLocationRelativeTo(null);

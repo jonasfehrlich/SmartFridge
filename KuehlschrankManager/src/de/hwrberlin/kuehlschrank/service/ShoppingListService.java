@@ -19,7 +19,9 @@ public class ShoppingListService implements Serializable {
      * then rebuilt from the current fridge state, so the UI always reflects reality.
      */
     public void generateList(FridgeManager manager) {
-        items.clear();
+    	if (manager==null) {
+    		return;
+    		}
         for (Product p : manager.getProductsNeedingRestock()) {
             if (!isAlreadyOnList(p.getName())) {
                 double missing = Math.ceil(p.getMinimumQuantity() - p.getQuantity());

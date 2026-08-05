@@ -338,4 +338,21 @@ public class MainWindow {
         }
         btn.repaint();
     }
+    public boolean saveData() {
+        try {
+            fridgeManager.save();
+            shoppingListService.save();
+            return true;
+
+        } catch (RuntimeException e) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "The data could not be saved:\n" + e.getMessage(),
+                    "Save error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return false;
+        }
+    }
 }
