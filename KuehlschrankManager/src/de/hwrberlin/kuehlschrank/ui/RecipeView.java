@@ -135,7 +135,7 @@ public class RecipeView {
         onlineMode = online;
         if (online) {
         	recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
-            statusLabel.setText("\uD83D\uDFE2  Online \u2013 Spoonacular API");
+            statusLabel.setText("\uD83D\uDFE2  Online – Spoonacular API");
             statusLabel.setForeground(SmartFridgeApp.ACCENT);
             onlineToggle.setText("Online  \u2713");
         } else {
@@ -231,8 +231,7 @@ public class RecipeView {
                             ? "No matching recipes found. Try adding more products to your fridge."
                             : "Select a recipe on the left to see details.");
                 } catch (Exception ex) {
-                    detailArea.setText("\u26A0 Error: " + ex.getCause().getMessage() +
-                            "\n\nTip: Switch to Offline mode if the API is unavailable.");
+                    detailArea.setText("\u274C  Error while loading recipes:\n" + ex.getMessage());
                 }
             }
         };
@@ -258,9 +257,9 @@ public class RecipeView {
         sb.append("Ingredients:\n");
         for (String ingredient : r.getIngredients()) {
         	boolean have = fridgeManager.containsIngredient(ingredient);
-            sb.append(have ? "  \u2705  " : "  \uD83D\uDECD  ")
+            sb.append(have ? "  \u2705  " : "  \uD83D\uDED2  ")
               .append(ingredient)
-              .append(have ? "" : "  \u2190 missing")
+              .append(have ? "" : "  (not in fridge)")
               .append("\n");
         }
 

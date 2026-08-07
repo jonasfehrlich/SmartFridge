@@ -68,8 +68,10 @@ public class ChaosPanView {
         resultPanel.setBackground(SmartFridgeApp.BG_DARK);
 
         JLabel placeholder = new JLabel(
-                "<html><center>Click \"Create Chaos Pan\"<br>"
-                + "to get recipe suggestions for soon-to-expire products.</center></html>");
+                "<html><center>\uD83C\uDF73<br><br>"
+                + "Click <b>\"Create Chaos Pan\"</b><br>"
+                + "to get recipe suggestions<br>"
+                + "for soon-to-expire products.</center></html>");
         placeholder.setForeground(SmartFridgeApp.TEXT_SECONDARY);
         placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         placeholder.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -89,7 +91,7 @@ public class ChaosPanView {
         List<Product> expiring = fridgeManager.getExpiringSoon(EXPIRING_SOON_DAYS);
 
         if (expiring.isEmpty()) {
-            JLabel ok = new JLabel("\u2705  All products are still fresh \u2013 no chaos pan needed!");
+            JLabel ok = new JLabel("\u2705  All products are still fresh – no chaos pan needed!");
             ok.setFont(new Font("Segoe UI", Font.PLAIN, 14));
             ok.setForeground(SmartFridgeApp.ACCENT);
             ok.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -108,7 +110,7 @@ public class ChaosPanView {
         for (Product p : expiring) expiringNames.add(p.getName());
 
         if (suggestions.isEmpty()) {
-            JLabel noRec = new JLabel("\uD83D\uDCA1  No matching recipes found \u2013 just fry everything together!");
+            JLabel noRec = new JLabel("\uD83D\uDCA1  No matching recipes found – just fry everything together!");
             noRec.setFont(new Font("Segoe UI", Font.ITALIC, 13));
             noRec.setForeground(SmartFridgeApp.ACCENT_WARN);
             noRec.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -135,7 +137,7 @@ public class ChaosPanView {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height + 200));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel title = new JLabel("\u26A0  Expiring soon (\u2264 " + EXPIRING_SOON_DAYS + " days)");
+        JLabel title = new JLabel("\u26A0  Expiring soon (≤ " + EXPIRING_SOON_DAYS + " days)");
         title.setFont(new Font("Segoe UI", Font.BOLD, 14));
         title.setForeground(SmartFridgeApp.ACCENT_WARN);
         card.add(title, BorderLayout.NORTH);
