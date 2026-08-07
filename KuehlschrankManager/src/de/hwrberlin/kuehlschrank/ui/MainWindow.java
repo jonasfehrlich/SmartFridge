@@ -28,7 +28,7 @@ public class MainWindow {
         {"\uD83D\uDED2", "Shopping List",  SmartFridgeApp.ACCENT_BLUE},
         {"\uD83D\uDCD6", "Recipes",        SmartFridgeApp.ACCENT_LIGHT},
         {"\uD83C\uDF73", "Chaos Pan",      SmartFridgeApp.ACCENT_WARN},
-        {"\u26A0\uFE0F",  "Warnings",       SmartFridgeApp.ACCENT_DANGER},
+        {"\u26A0",        "Warnings",       SmartFridgeApp.ACCENT_DANGER},
     };
 
     // KPI label refs so we can refresh them
@@ -100,18 +100,25 @@ public class MainWindow {
         header.setOpaque(false);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
-        // Greeting
-        int    h      = LocalTime.now().getHour();
-        String greet;
-        String greetIcon;
-        if (h < 6)       { greet = "Good night";      greetIcon = "\uD83C\uDF19"; }
-        else if (h < 12) { greet = "Good morning";    greetIcon = "\u2600\uFE0F"; }
-        else if (h < 18) { greet = "Good afternoon";  greetIcon = "\uD83C\uDF05"; }
-        else if (h < 22) { greet = "Good evening";    greetIcon = "\uD83C\uDF06"; }
-        else             { greet = "Good night";      greetIcon = "\uD83C\uDF19"; }
-        JLabel title  = new JLabel(greetIcon + "  " + greet);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        title.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        // Greeting — split emoji + text to avoid □ blocks
+        int    h = LocalTime.now().getHour();
+        String greetIcon, greetText;
+        if      (h <  6) { greetIcon = "\uD83C\uDF19"; greetText = "Good night"; }
+        else if (h < 12) { greetIcon = "\u2600";        greetText = "Good morning"; }
+        else if (h < 18) { greetIcon = "\uD83C\uDF05"; greetText = "Good afternoon"; }
+        else if (h < 22) { greetIcon = "\uD83C\uDF06"; greetText = "Good evening"; }
+        else             { greetIcon = "\uD83C\uDF19"; greetText = "Good night"; }
+
+        JPanel greetRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        greetRow.setOpaque(false);
+        JLabel greetEmoji = new JLabel(greetIcon);
+        greetEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+        greetEmoji.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        JLabel greetLbl = new JLabel("  " + greetText);
+        greetLbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        greetLbl.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        greetRow.add(greetEmoji);
+        greetRow.add(greetLbl);
 
         JLabel sub = new JLabel("Your SmartFridge at a glance");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -120,20 +127,27 @@ public class MainWindow {
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
         left.setOpaque(false);
-        left.add(title);
+        left.add(greetRow);
         left.add(Box.createVerticalStrut(2));
         left.add(sub);
 
-        // Mode chip (top right) - reflects offline/online state at launch
-        JLabel modeChip = new JLabel("\uD83D\uDFE1  Offline mode");
-        modeChip.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        modeChip.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        // Mode chip — split emoji + text
+        JPanel modeChip = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        modeChip.setOpaque(false);
         modeChip.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(
                 new Color(SmartFridgeApp.TEXT_SECONDARY.getRed(),
                           SmartFridgeApp.TEXT_SECONDARY.getGreen(),
                           SmartFridgeApp.TEXT_SECONDARY.getBlue(), 80), 1, true),
             new EmptyBorder(4, 10, 4, 10)));
+        JLabel modeEmoji = new JLabel("\uD83D\uDFE1");
+        modeEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 11));
+        modeEmoji.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        JLabel modeText = new JLabel(" Offline mode");
+        modeText.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        modeText.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        modeChip.add(modeEmoji);
+        modeChip.add(modeText);
 
         header.add(left,     BorderLayout.WEST);
         header.add(modeChip, BorderLayout.EAST);
@@ -158,7 +172,7 @@ public class MainWindow {
 
         bar.add(buildKpiCardLive("\uD83D\uDCE6", kpiProducts, "Items in fridge",
                 SmartFridgeApp.ACCENT));
-        bar.add(buildKpiCardLive("\u26A0\uFE0F",  kpiExpiring, "Expiring soon (5d)",
+        bar.add(buildKpiCardLive("\u26A0",        kpiExpiring, "Expiring soon (5d)",
                 expiring > 0 ? SmartFridgeApp.ACCENT_WARN : SmartFridgeApp.ACCENT));
         bar.add(buildKpiCardLive("\uD83D\uDED2", kpiShopping, "On shopping list",
                 SmartFridgeApp.ACCENT_BLUE));
@@ -191,6 +205,7 @@ public class MainWindow {
         card.setLayout(new BorderLayout(10, 0));
         card.setBorder(new EmptyBorder(12, 16, 12, 16));
 
+        // Icon with dedicated Emoji font
         JLabel iconLbl = new JLabel(icon);
         iconLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 22));
         iconLbl.setBorder(new EmptyBorder(0, 0, 0, 8));
@@ -232,13 +247,20 @@ public class MainWindow {
         side.setPreferredSize(new Dimension(200, 0));
         side.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, SmartFridgeApp.BORDER));
 
-        // Logo
-        JLabel logo = new JLabel("\uD83C\uDF73  SmartFridge");
-        logo.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        logo.setForeground(SmartFridgeApp.ACCENT);
-        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        logo.setBorder(new EmptyBorder(24, 20, 6, 16));
-        side.add(logo);
+        // Logo: emoji + text separated
+        JPanel logoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        logoRow.setOpaque(false);
+        logoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoRow.setBorder(new EmptyBorder(24, 20, 6, 16));
+        JLabel logoEmoji = new JLabel("\uD83C\uDF73");
+        logoEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 17));
+        logoEmoji.setForeground(SmartFridgeApp.ACCENT);
+        JLabel logoText = new JLabel("  SmartFridge");
+        logoText.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        logoText.setForeground(SmartFridgeApp.ACCENT);
+        logoRow.add(logoEmoji);
+        logoRow.add(logoText);
+        side.add(logoRow);
 
         JLabel tagline = new JLabel("Smart kitchen, less waste");
         tagline.setFont(new Font("Segoe UI", Font.PLAIN, 10));
@@ -281,8 +303,29 @@ public class MainWindow {
         return side;
     }
 
+    /**
+     * Builds a nav button with emoji and label as SEPARATE components
+     * inside a JPanel, wrapped in a transparent JButton overlay.
+     * This prevents □ blocks caused by mixing emoji codepoints
+     * into a single JLabel with a non-emoji font.
+     */
     private JButton buildNavBtn(String icon, String label, Color accent) {
-        JButton btn = new JButton(icon + "   " + label) {
+        // Inner panel: emoji label + text label side by side
+        JPanel inner = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        inner.setOpaque(false);
+
+        JLabel iconLbl = new JLabel(icon);
+        iconLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        iconLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+
+        JLabel textLbl = new JLabel(label);
+        textLbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        textLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+
+        inner.add(iconLbl);
+        inner.add(textLbl);
+
+        JButton btn = new JButton() {
             @Override protected void paintComponent(Graphics g) {
                 Color bg = getBackground();
                 if (bg != null && bg.getAlpha() > 10) {
@@ -301,40 +344,54 @@ public class MainWindow {
                 }
                 super.paintComponent(g);
             }
+            @Override public Dimension getPreferredSize() {
+                return new Dimension(200, 44);
+            }
         };
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        btn.setForeground(SmartFridgeApp.TEXT_SECONDARY);
-        btn.setBackground(new Color(0, 0, 0, 0));
+        btn.setLayout(new BorderLayout());
+        btn.add(inner, BorderLayout.CENTER);
         btn.setOpaque(false);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
         btn.setFocusPainted(false);
-        btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btn.setBorder(new EmptyBorder(11, 20, 11, 12));
+        btn.setBorder(new EmptyBorder(0, 14, 0, 12));
+
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             boolean wasActive;
             @Override public void mouseEntered(java.awt.event.MouseEvent e) {
-                wasActive = btn.getForeground().equals(accent);
-                if (!wasActive) btn.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+                wasActive = textLbl.getForeground().equals(accent);
+                if (!wasActive) {
+                    iconLbl.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+                    textLbl.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+                }
             }
             @Override public void mouseExited(java.awt.event.MouseEvent e) {
-                if (!wasActive) btn.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+                if (!wasActive) {
+                    iconLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+                    textLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+                }
             }
         });
+
+        // Store refs for setNavActive
+        btn.putClientProperty("iconLbl", iconLbl);
+        btn.putClientProperty("textLbl", textLbl);
         return btn;
     }
 
     private void setNavActive(JButton btn, boolean active, Color accent) {
+        JLabel iconLbl = (JLabel) btn.getClientProperty("iconLbl");
+        JLabel textLbl = (JLabel) btn.getClientProperty("textLbl");
         if (active) {
-            btn.setForeground(accent);
-            btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            btn.setBackground(new Color(
-                    accent.getRed(), accent.getGreen(), accent.getBlue(), 60));
+            if (iconLbl != null) { iconLbl.setForeground(accent); iconLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13)); }
+            if (textLbl != null) { textLbl.setForeground(accent); textLbl.setFont(new Font("Segoe UI", Font.BOLD, 13)); }
+            btn.setBackground(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 60));
         } else {
-            btn.setForeground(SmartFridgeApp.TEXT_SECONDARY);
-            btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            if (iconLbl != null) { iconLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY); iconLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13)); }
+            if (textLbl != null) { textLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY); textLbl.setFont(new Font("Segoe UI", Font.PLAIN, 13)); }
             btn.setBackground(new Color(0, 0, 0, 0));
         }
         btn.repaint();
