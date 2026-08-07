@@ -28,9 +28,9 @@ public class ChaosPanView {
     private JScrollPane scrollPane;
 
     public ChaosPanView(FridgeManager fm, RecipeService rs, ShoppingListView sv) {
-        this.fridgeManager  = fm;
-        this.recipeService  = rs;
-        this.shoppingView   = sv;
+        this.fridgeManager = fm;
+        this.recipeService = rs;
+        this.shoppingView  = sv;
     }
 
     public JPanel createPanel() {
@@ -38,21 +38,31 @@ public class ChaosPanView {
         root.setBackground(SmartFridgeApp.BG_DARK);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
+        // Header
         JPanel header = new JPanel(new BorderLayout(12, 0));
         header.setOpaque(false);
 
-        JLabel heading = new JLabel("\uD83C\uDF73  Chaos Pan");
-        heading.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        heading.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+
+        // Heading: emoji + text separated to avoid □ blocks
+        JPanel headingRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        headingRow.setOpaque(false);
+        JLabel headEmoji = new JLabel("\uD83C\uDF73");
+        headEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+        headEmoji.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        JLabel headText = new JLabel("  Chaos Pan");
+        headText.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        headText.setForeground(SmartFridgeApp.TEXT_PRIMARY);
+        headingRow.add(headEmoji);
+        headingRow.add(headText);
 
         JLabel sub = new JLabel("Creates recipes from soon-to-expire products");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         sub.setForeground(SmartFridgeApp.TEXT_SECONDARY);
 
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(heading);
+        titleBlock.add(headingRow);
         titleBlock.add(Box.createVerticalStrut(3));
         titleBlock.add(sub);
 
@@ -67,21 +77,32 @@ public class ChaosPanView {
         resultPanel.setLayout(new BoxLayout(resultPanel, BoxLayout.Y_AXIS));
         resultPanel.setBackground(SmartFridgeApp.BG_DARK);
 
-        JLabel placeholder = new JLabel(
-                "<html><center>\uD83C\uDF73<br><br>"
-                + "Click <b>\"Create Chaos Pan\"</b><br>"
-                + "to get recipe suggestions<br>"
-                + "for soon-to-expire products.</center></html>");
-        placeholder.setForeground(SmartFridgeApp.TEXT_SECONDARY);
-        placeholder.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        placeholder.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Placeholder: emoji in its own label with Emoji font
+        JPanel placeholder = new JPanel();
+        placeholder.setLayout(new BoxLayout(placeholder, BoxLayout.Y_AXIS));
+        placeholder.setOpaque(false);
         placeholder.setBorder(new EmptyBorder(60, 0, 0, 0));
+        placeholder.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel phEmoji = new JLabel("\uD83C\uDF73");
+        phEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+        phEmoji.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        phEmoji.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel phText = new JLabel("<html><center>Click <b>\"Create Chaos Pan\"</b><br>"
+                + "to get recipe suggestions<br>for soon-to-expire products.</center></html>");
+        phText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        phText.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        phText.setAlignmentX(Component.CENTER_ALIGNMENT);
+        phText.setBorder(new EmptyBorder(10, 0, 0, 0));
+
+        placeholder.add(phEmoji);
+        placeholder.add(phText);
         resultPanel.add(placeholder);
 
         scrollPane = UiHelper.scrollPane(resultPanel);
         scrollPane.setBorder(null);
         root.add(scrollPane, BorderLayout.CENTER);
-
         return root;
     }
 
@@ -91,12 +112,11 @@ public class ChaosPanView {
         List<Product> expiring = fridgeManager.getExpiringSoon(EXPIRING_SOON_DAYS);
 
         if (expiring.isEmpty()) {
-            JLabel ok = new JLabel("\u2705  All products are still fresh – no chaos pan needed!");
-            ok.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            ok.setForeground(SmartFridgeApp.ACCENT);
-            ok.setAlignmentX(Component.LEFT_ALIGNMENT);
-            ok.setBorder(new EmptyBorder(8, 0, 0, 0));
-            resultPanel.add(ok);
+            JPanel okRow = emojiTextRow("\u2705", "All products are still fresh \u2013 no chaos pan needed!",
+                    SmartFridgeApp.ACCENT, Font.PLAIN, 14);
+            okRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            okRow.setBorder(new EmptyBorder(8, 0, 0, 0));
+            resultPanel.add(okRow);
             resultPanel.revalidate();
             resultPanel.repaint();
             return;
@@ -110,11 +130,11 @@ public class ChaosPanView {
         for (Product p : expiring) expiringNames.add(p.getName());
 
         if (suggestions.isEmpty()) {
-            JLabel noRec = new JLabel("\uD83D\uDCA1  No matching recipes found – just fry everything together!");
-            noRec.setFont(new Font("Segoe UI", Font.ITALIC, 13));
-            noRec.setForeground(SmartFridgeApp.ACCENT_WARN);
-            noRec.setAlignmentX(Component.LEFT_ALIGNMENT);
-            resultPanel.add(noRec);
+            JPanel noRow = emojiTextRow("\uD83D\uDCA1",
+                    "No matching recipes found \u2013 just fry everything together!",
+                    SmartFridgeApp.ACCENT_WARN, Font.ITALIC, 13);
+            noRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            resultPanel.add(noRow);
         } else {
             JLabel recLabel = UiHelper.sectionLabel("Recipe suggestions:");
             recLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -137,10 +157,11 @@ public class ChaosPanView {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height + 200));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel title = new JLabel("\u26A0  Expiring soon (≤ " + EXPIRING_SOON_DAYS + " days)");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        title.setForeground(SmartFridgeApp.ACCENT_WARN);
-        card.add(title, BorderLayout.NORTH);
+        // Title row
+        JPanel titleRow = emojiTextRow("\u26A0",
+                "  Expiring soon (\u2264 " + EXPIRING_SOON_DAYS + " days)",
+                SmartFridgeApp.ACCENT_WARN, Font.BOLD, 14);
+        card.add(titleRow, BorderLayout.NORTH);
 
         JPanel rows = new JPanel();
         rows.setLayout(new BoxLayout(rows, BoxLayout.Y_AXIS));
@@ -156,9 +177,17 @@ public class ChaosPanView {
             row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
             row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JLabel nameLbl = new JLabel("\u26A0 " + p.getName());
+            // Bullet + name (no emoji = no risk of block)
+            JPanel nameRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+            nameRow.setOpaque(false);
+            JLabel dot = new JLabel("\u2022");
+            dot.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            dot.setForeground(SmartFridgeApp.ACCENT_WARN);
+            JLabel nameLbl = new JLabel(p.getName());
             nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
             nameLbl.setForeground(SmartFridgeApp.ACCENT_WARN);
+            nameRow.add(dot);
+            nameRow.add(nameLbl);
 
             String dayText = daysLeft == 0 ? "expires TODAY!"
                     : daysLeft == 1 ? "1 day left"
@@ -167,9 +196,10 @@ public class ChaosPanView {
             infoLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             infoLbl.setForeground(SmartFridgeApp.TEXT_SECONDARY);
 
-            row.add(nameLbl, BorderLayout.WEST);
+            row.add(nameRow, BorderLayout.WEST);
             row.add(infoLbl, BorderLayout.EAST);
             rows.add(row);
+
             JSeparator sep = new JSeparator();
             sep.setForeground(SmartFridgeApp.BORDER);
             sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
@@ -185,11 +215,11 @@ public class ChaosPanView {
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, card.getPreferredSize().height + 200));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel title = new JLabel("\uD83C\uDF73 " + recipe.getName() +
-                "  (" + recipe.getPreparationTime() + " | " + recipe.getSource() + ")");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        title.setForeground(SmartFridgeApp.ACCENT);
-        card.add(title, BorderLayout.NORTH);
+        // Title row: emoji + name
+        JPanel titleRow = emojiTextRow("\uD83C\uDF73",
+                " " + recipe.getName() + "  (" + recipe.getPreparationTime() + " | " + recipe.getSource() + ")",
+                SmartFridgeApp.ACCENT, Font.BOLD, 14);
+        card.add(titleRow, BorderLayout.NORTH);
 
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -211,22 +241,38 @@ public class ChaosPanView {
         JPanel ingPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
         ingPanel.setOpaque(false);
         for (String ingredient : recipe.getIngredients()) {
-            boolean isExpiring = expiringNames.stream()
-                    .anyMatch(n -> n.equalsIgnoreCase(ingredient));
-            boolean inFridge = fridgeManager.findProduct(ingredient) != null;
+            boolean isExpiring = expiringNames.stream().anyMatch(n -> n.equalsIgnoreCase(ingredient));
+            boolean inFridge   = fridgeManager.findProduct(ingredient) != null;
             JLabel badge = UiHelper.badge(ingredient,
                     isExpiring ? SmartFridgeApp.ACCENT_WARN
                     : (inFridge ? SmartFridgeApp.ACCENT
                     : SmartFridgeApp.ACCENT_BLUE));
-            if (isExpiring) {
-                badge.setToolTipText("\u26A0 Expiring soon – please use first!");
-            } else if (!inFridge) {
-                badge.setToolTipText("\uD83D\uDED2 Not in fridge – add to shopping list?");
-            }
+            if (isExpiring)
+                badge.setToolTipText("\u26A0 Expiring soon \u2013 please use first!");
+            else if (!inFridge)
+                badge.setToolTipText("Not in fridge \u2013 add to shopping list?");
             ingPanel.add(badge);
         }
         body.add(ingPanel);
         card.add(body, BorderLayout.CENTER);
         return card;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: emoji + text as two separate labels in a FlowLayout panel
+    // Emoji uses "Segoe UI Emoji" font to prevent □ blocks
+    // -------------------------------------------------------------------------
+    private static JPanel emojiTextRow(String emoji, String text, Color color, int fontStyle, int fontSize) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        row.setOpaque(false);
+        JLabel emojiLbl = new JLabel(emoji);
+        emojiLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, fontSize));
+        emojiLbl.setForeground(color);
+        JLabel textLbl = new JLabel(text);
+        textLbl.setFont(new Font("Segoe UI", fontStyle, fontSize));
+        textLbl.setForeground(color);
+        row.add(emojiLbl);
+        row.add(textLbl);
+        return row;
     }
 }
