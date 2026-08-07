@@ -28,17 +28,16 @@ public class WarningsView {
                 SmartFridgeApp.ACCENT_DANGER));
         content.add(Box.createVerticalStrut(12));
         content.add(buildSection(
-                "\u26A0  Expiring soon",
+                "\u23F0  Expiring soon",
                 fridgeManager.getExpiringSoon(5),
                 SmartFridgeApp.ACCENT_WARN));
         content.add(Box.createVerticalStrut(12));
         content.add(buildSection(
-                "\uD83D\uDECD  Restock needed",
+                "\uD83D\uDED2  Restock needed",
                 fridgeManager.getProductsNeedingRestock(),
                 SmartFridgeApp.ACCENT_BLUE));
         content.add(Box.createVerticalGlue());
 
-        // Wrap in a scrollable JPanel so the return type is JPanel
         JScrollPane scroll = UiHelper.scrollPane(content);
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(SmartFridgeApp.BG_DARK);
@@ -79,7 +78,13 @@ public class WarningsView {
                 row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
                 row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                JLabel nameLbl = new JLabel(p.getName());
+                String bullet = accentColor.equals(SmartFridgeApp.ACCENT_DANGER)
+                        ? "\u274C  "
+                        : accentColor.equals(SmartFridgeApp.ACCENT_WARN)
+                        ? "\u23F0  "
+                        : "\uD83D\uDED2  ";
+
+                JLabel nameLbl = new JLabel(bullet + p.getName());
                 nameLbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
                 nameLbl.setForeground(SmartFridgeApp.TEXT_PRIMARY);
 

@@ -32,7 +32,6 @@ public class RecipeView {
     private final ShoppingListService  shoppingListService;
     private final ShoppingListView     shoppingView;
 
-    // UI state
     private DefaultListModel<Recipe>   listModel;
     private JList<Recipe>              recipeList;
     private JTextArea                  detailArea;
@@ -50,32 +49,25 @@ public class RecipeView {
     }
 
     // -------------------------------------------------------------------------
-    // Public entry point
-    // -------------------------------------------------------------------------
-
     public JPanel createPanel() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
         root.setBackground(SmartFridgeApp.BG_DARK);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        root.add(buildToolbar(),    BorderLayout.NORTH);
-        root.add(buildSplitArea(),  BorderLayout.CENTER);
+        root.add(buildToolbar(),   BorderLayout.NORTH);
+        root.add(buildSplitArea(), BorderLayout.CENTER);
         return root;
     }
 
     // -------------------------------------------------------------------------
     // Toolbar
     // -------------------------------------------------------------------------
-
     private JPanel buildToolbar() {
         JPanel bar = new JPanel(new BorderLayout(12, 0));
         bar.setOpaque(false);
         bar.setBorder(new EmptyBorder(0, 0, 12, 0));
 
-        // Left: action buttons
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
-
         JButton searchBtn  = UiHelper.accentButton("\uD83D\uDD0D  Suggest Recipes");
         JButton addListBtn = UiHelper.ghostButton("\uD83D\uDED2  Add Missing to Shopping List");
         searchBtn .addActionListener(e -> searchRecipes());
@@ -83,10 +75,8 @@ public class RecipeView {
         left.add(searchBtn);
         left.add(addListBtn);
 
-        // Right: online toggle + status
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-
         onlineToggle = buildOnlineToggle();
         statusLabel  = new JLabel("\uD83D\uDFE1  Offline mode");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -134,8 +124,8 @@ public class RecipeView {
     private void toggleOnlineMode(boolean online) {
         onlineMode = online;
         if (online) {
-        	recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
-            statusLabel.setText("\uD83D\uDFE2  Online – Spoonacular API");
+            recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
+            statusLabel.setText("\uD83D\uDFE2  Online \u2013 Spoonacular");
             statusLabel.setForeground(SmartFridgeApp.ACCENT);
             onlineToggle.setText("Online  \u2713");
         } else {
@@ -145,15 +135,13 @@ public class RecipeView {
             onlineToggle.setText("Online");
         }
         listModel.clear();
-        detailArea.setText("Provider switched. Click \"Suggest Recipes\" to search.");
+        detailArea.setText("\uD83D\uDD04  Provider switched. Click \"Suggest Recipes\" to search.");
     }
 
     // -------------------------------------------------------------------------
-    // Split area: recipe list (left) + detail panel (right)
+    // Split area
     // -------------------------------------------------------------------------
-
     private JSplitPane buildSplitArea() {
-        // --- Left: recipe card list ---
         listModel  = new DefaultListModel<>();
         recipeList = new JList<>(listModel);
         recipeList.setBackground(SmartFridgeApp.BG_DARK);
@@ -173,7 +161,6 @@ public class RecipeView {
         leftPanel.add(UiHelper.sectionLabel("\uD83D\uDCD6  Recipes"), BorderLayout.NORTH);
         leftPanel.add(listScroll, BorderLayout.CENTER);
 
-        // --- Right: detail panel ---
         JPanel rightPanel = buildDetailPanel();
 
         JSplitPane split = new JSplitPane(
@@ -198,7 +185,7 @@ public class RecipeView {
         detailArea.setBackground(SmartFridgeApp.BG_CARD);
         detailArea.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         detailArea.setBorder(new EmptyBorder(16, 16, 16, 16));
-        detailArea.setText("Click \"Suggest Recipes\" to find matching recipes\nfor your current fridge contents.");
+        detailArea.setText("\uD83D\uDD0D  Click \"Suggest Recipes\" to find matching recipes\nfor your current fridge contents.");
 
         JScrollPane detailScroll = UiHelper.scrollPane(detailArea);
         detailScroll.setBorder(BorderFactory.createLineBorder(
@@ -212,13 +199,11 @@ public class RecipeView {
     // -------------------------------------------------------------------------
     // Actions
     // -------------------------------------------------------------------------
-
     private void searchRecipes() {
-        detailArea.setText("\uD83D\uDD04  Searching" +
-                (onlineMode ? " (Spoonacular API)" : " (local database)") + "...");
+        detailArea.setText("\uD83D\uDD04  Searching"
+                + (onlineMode ? " (Spoonacular API)" : " (local database)") + "...");
         listModel.clear();
 
-        // Run in background so the UI does not freeze during API calls
         SwingWorker<List<Recipe>, Void> worker = new SwingWorker<>() {
             @Override protected List<Recipe> doInBackground() {
                 return recipeService.suggestRecipes(fridgeManager);
@@ -228,8 +213,8 @@ public class RecipeView {
                     currentRecipes = get();
                     for (Recipe r : currentRecipes) listModel.addElement(r);
                     detailArea.setText(currentRecipes.isEmpty()
-                            ? "No matching recipes found. Try adding more products to your fridge."
-                            : "Select a recipe on the left to see details.");
+                            ? "\uD83E\uDD37  No matching recipes found.\nTry adding more products to your fridge."
+                            : "\u2190  Select a recipe to see details.");
                 } catch (Exception ex) {
                     detailArea.setText("\u274C  Error while loading recipes:\n" + ex.getMessage());
                 }
@@ -251,12 +236,12 @@ public class RecipeView {
         sb.append("\n");
 
         if (!r.getDescription().isBlank()) {
-            sb.append("Instructions:\n").append(r.getDescription()).append("\n\n");
+            sb.append("\uD83D\uDCCB  Instructions:\n").append(r.getDescription()).append("\n\n");
         }
 
-        sb.append("Ingredients:\n");
+        sb.append("\uD83E\uDED5  Ingredients:\n");
         for (String ingredient : r.getIngredients()) {
-        	boolean have = fridgeManager.containsIngredient(ingredient);
+            boolean have = fridgeManager.containsIngredient(ingredient);
             sb.append(have ? "  \u2705  " : "  \uD83D\uDED2  ")
               .append(ingredient)
               .append(have ? "" : "  (not in fridge)")
@@ -295,9 +280,8 @@ public class RecipeView {
     }
 
     // -------------------------------------------------------------------------
-    // Custom cell renderer – recipe cards
+    // Custom cell renderer
     // -------------------------------------------------------------------------
-
     private class RecipeCardRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(
@@ -317,7 +301,6 @@ public class RecipeView {
             name.setFont(new Font("Segoe UI", Font.BOLD, 13));
             name.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
 
-            // Count how many ingredients are available
             long have = r.getIngredients().stream()
                     .filter(fridgeManager::containsIngredient).count();
             int  total = r.getIngredients().size();
@@ -327,7 +310,7 @@ public class RecipeView {
                              : SmartFridgeApp.ACCENT_DANGER;
 
             JLabel meta = new JLabel("\u23F1 " + r.getPreparationTime()
-                    + "   \uD83D\uDED2 " + ratio);
+                    + "   \uD83E\uDED5 " + ratio);
             meta.setFont(new Font("Segoe UI", Font.PLAIN, 11));
             meta.setForeground(ratioColor);
 
