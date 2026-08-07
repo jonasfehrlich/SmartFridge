@@ -102,10 +102,15 @@ public class MainWindow {
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
         // Greeting
-        String hour   = String.valueOf(LocalTime.now().getHour());
-        int    h      = Integer.parseInt(hour);
-        String greet  = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-        JLabel title  = new JLabel(greet + "  \uD83D\uDFE2");
+        int    h      = LocalTime.now().getHour();
+        String greet;
+        String greetIcon;
+        if (h < 6)       { greet = "Good night";      greetIcon = "\uD83C\uDF19"; }
+        else if (h < 12) { greet = "Good morning";    greetIcon = "\u2600\uFE0F"; }
+        else if (h < 18) { greet = "Good afternoon";  greetIcon = "\uD83C\uDF05"; }
+        else if (h < 22) { greet = "Good evening";    greetIcon = "\uD83C\uDF06"; }
+        else             { greet = "Good night";      greetIcon = "\uD83C\uDF19"; }
+        JLabel title  = new JLabel(greetIcon + "  " + greet);
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(SmartFridgeApp.TEXT_PRIMARY);
 
@@ -265,7 +270,7 @@ public class MainWindow {
         side.add(Box.createVerticalGlue());
         side.add(UiHelper.divider());
 
-        JLabel version = new JLabel("v1.0  •  HWR Berlin 2025");
+        JLabel version = new JLabel("v1.0  •  HWR Berlin 2026");
         version.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         version.setForeground(SmartFridgeApp.TEXT_SECONDARY);
         version.setAlignmentX(Component.LEFT_ALIGNMENT);

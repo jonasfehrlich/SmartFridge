@@ -104,6 +104,9 @@ public class ShoppingListView {
                     list, value, index, isSelected, cellHasFocus);
             String text = value == null ? "" : value.toString();
             boolean done = text.startsWith("[x]");
+            String icon  = done ? "\u2705  " : "\uD83D\uDED2  ";
+            String display = text.replaceFirst("^\\[.\\]\\s*", "");
+            lbl.setText(icon + display);
             lbl.setBackground(isSelected
                     ? new Color(99, 179, 122, 50)
                     : (index % 2 == 0 ? SmartFridgeApp.BG_CARD : SmartFridgeApp.BG_HOVER));
