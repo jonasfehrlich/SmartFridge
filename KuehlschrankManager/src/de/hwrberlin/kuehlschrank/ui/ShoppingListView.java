@@ -29,7 +29,7 @@ public class ShoppingListView {
         root.add(heading, BorderLayout.NORTH);
 
         listModel = new DefaultListModel<>();
-        list  = new JList<>(listModel);
+        list = new JList<>(listModel);
         list.setBackground(SmartFridgeApp.BG_CARD);
         list.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         list.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -46,10 +46,10 @@ public class ShoppingListView {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton genBtn     = UiHelper.accentButton("\uD83D\uDD04  Update list");
-        JButton buyBtn     = UiHelper.ghostButton("\u2713  Mark as purchased");
-        JButton cleanBtn   = UiHelper.ghostButton("\uD83E\uDDF9  Remove purchased");
-        JButton addBtn     = UiHelper.ghostButton("+ Add manually");
+        JButton genBtn   = UiHelper.accentButton("\uD83D\uDD04  Update list");
+        JButton buyBtn   = UiHelper.ghostButton("\u2713  Mark as purchased");
+        JButton cleanBtn = UiHelper.ghostButton("\uD83E\uDDF9  Remove purchased");
+        JButton addBtn   = UiHelper.ghostButton("+ Add manually");
 
         genBtn.addActionListener(e -> { service.generateList(fridgeManager); refresh(); });
         buyBtn.addActionListener(e -> {
@@ -95,28 +95,42 @@ public class ShoppingListView {
             listModel.addElement(item.toString());
     }
 
-    private static class ShoppingListRenderer extends DefaultListCellRenderer {
+    // -------------------------------------------------------------------------
+    // Renderer: separate emoji label (Segoe UI Emoji) + text label (Segoe UI)
+    // to avoid □ placeholder blocks on Windows
+    // -------------------------------------------------------------------------
+    private static class ShoppingListRenderer implements ListCellRenderer<String> {
         @Override
         public Component getListCellRendererComponent(
-                JList<?> list, Object value, int index,
+                JList<? extends String> list, String value, int index,
                 boolean isSelected, boolean cellHasFocus) {
-            JLabel lbl = (JLabel) super.getListCellRendererComponent(
-                    list, value, index, isSelected, cellHasFocus);
-            String text = value == null ? "" : value.toString();
+
+            String text = value == null ? "" : value;
             boolean done = text.startsWith("[x]");
-            String icon  = done ? "\u2705  " : "\uD83D\uDED2  ";
             String display = text.replaceFirst("^\\[.\\]\\s*", "");
-            lbl.setText(icon + display);
-            lbl.setBackground(isSelected
+            String iconChar = done ? "\u2705" : "\uD83D\uDED2";
+
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            row.setOpaque(true);
+            row.setBackground(isSelected
                     ? new Color(99, 179, 122, 50)
                     : (index % 2 == 0 ? SmartFridgeApp.BG_CARD : SmartFridgeApp.BG_HOVER));
-            lbl.setForeground(done ? SmartFridgeApp.TEXT_SECONDARY : SmartFridgeApp.TEXT_PRIMARY);
+            row.setBorder(new EmptyBorder(0, 8, 0, 8));
+            row.setPreferredSize(new Dimension(row.getPreferredSize().width, 42));
+
+            JLabel icon = new JLabel(iconChar);
+            icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            icon.setForeground(done ? SmartFridgeApp.TEXT_SECONDARY : SmartFridgeApp.ACCENT);
+
+            JLabel lbl = new JLabel(display);
             lbl.setFont(done
                     ? new Font("Segoe UI", Font.ITALIC, 13)
                     : new Font("Segoe UI", Font.PLAIN, 13));
-            lbl.setBorder(new EmptyBorder(0, 16, 0, 16));
-            lbl.setOpaque(true);
-            return lbl;
+            lbl.setForeground(done ? SmartFridgeApp.TEXT_SECONDARY : SmartFridgeApp.TEXT_PRIMARY);
+
+            row.add(icon);
+            row.add(lbl);
+            return row;
         }
     }
 }

@@ -89,7 +89,6 @@ public class MainWindow {
         JPanel header = new JPanel(new BorderLayout()) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
-                // Subtle gradient banner
                 GradientPaint gp = new GradientPaint(
                     0, 0, new Color(0x1A, 0x2E, 0x22),
                     getWidth(), 0, SmartFridgeApp.BG_DARK);
@@ -125,19 +124,19 @@ public class MainWindow {
         left.add(Box.createVerticalStrut(2));
         left.add(sub);
 
-        // API status chip (top right)
-        JLabel api = new JLabel("\uD83D\uDFE2  Online  •  TheMealDB");
-        api.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        api.setForeground(SmartFridgeApp.ACCENT);
-        api.setBorder(BorderFactory.createCompoundBorder(
+        // Mode chip (top right) - reflects offline/online state at launch
+        JLabel modeChip = new JLabel("\uD83D\uDFE1  Offline mode");
+        modeChip.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        modeChip.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        modeChip.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(
-                new Color(SmartFridgeApp.ACCENT.getRed(),
-                          SmartFridgeApp.ACCENT.getGreen(),
-                          SmartFridgeApp.ACCENT.getBlue(), 80), 1, true),
+                new Color(SmartFridgeApp.TEXT_SECONDARY.getRed(),
+                          SmartFridgeApp.TEXT_SECONDARY.getGreen(),
+                          SmartFridgeApp.TEXT_SECONDARY.getBlue(), 80), 1, true),
             new EmptyBorder(4, 10, 4, 10)));
 
-        header.add(left, BorderLayout.WEST);
-        header.add(api,  BorderLayout.EAST);
+        header.add(left,     BorderLayout.WEST);
+        header.add(modeChip, BorderLayout.EAST);
         return header;
     }
 
@@ -178,7 +177,7 @@ public class MainWindow {
                 // Accent top strip
                 g2.setColor(accent);
                 g2.fillRect(0, 0, getWidth(), 3);
-                g2.fillRoundRect(0, 0, getWidth(), 6, 14, 14); // round top corners
+                g2.fillRoundRect(0, 0, getWidth(), 6, 14, 14);
                 // Border
                 g2.setColor(new Color(accent.getRed(),
                         accent.getGreen(), accent.getBlue(), 50));
@@ -270,7 +269,7 @@ public class MainWindow {
         side.add(Box.createVerticalGlue());
         side.add(UiHelper.divider());
 
-        JLabel version = new JLabel("v1.0  •  HWR Berlin 2026");
+        JLabel version = new JLabel("v1.0  \u2022  HWR Berlin 2026");
         version.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         version.setForeground(SmartFridgeApp.TEXT_SECONDARY);
         version.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -285,20 +284,17 @@ public class MainWindow {
     private JButton buildNavBtn(String icon, String label, Color accent) {
         JButton btn = new JButton(icon + "   " + label) {
             @Override protected void paintComponent(Graphics g) {
-                // Active highlight painted by setNavActive via background
                 Color bg = getBackground();
                 if (bg != null && bg.getAlpha() > 10) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                                         RenderingHints.VALUE_ANTIALIAS_ON);
-                    // Gradient highlight
                     GradientPaint gp = new GradientPaint(
                         0, 0, new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 120),
                         getWidth(), 0, new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 0));
                     g2.setPaint(gp);
                     g2.fill(new RoundRectangle2D.Float(
                             6, 2, getWidth()-12, getHeight()-4, 10, 10));
-                    // Left accent bar
                     g2.setColor(accent);
                     g2.fillRoundRect(4, 6, 3, getHeight()-12, 3, 3);
                     g2.dispose();
@@ -343,12 +339,12 @@ public class MainWindow {
         }
         btn.repaint();
     }
+
     public boolean saveData() {
         try {
             fridgeManager.save();
             shoppingListService.save();
             return true;
-
         } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(
                     null,
@@ -356,7 +352,6 @@ public class MainWindow {
                     "Save error",
                     JOptionPane.ERROR_MESSAGE
             );
-
             return false;
         }
     }

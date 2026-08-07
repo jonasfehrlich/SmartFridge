@@ -12,8 +12,6 @@ import de.hwrberlin.kuehlschrank.recipe.LocalRecipeProvider;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,8 +33,9 @@ public class RecipeView {
     // UI state
     private DefaultListModel<Recipe>   listModel;
     private JList<Recipe>              recipeList;
-    private JTextArea                  detailArea;
+    private JEditorPane                detailArea;
     private JLabel                     statusLabel;
+    private JLabel                     statusDot;
     private JToggleButton              onlineToggle;
     private List<Recipe>               currentRecipes = new ArrayList<>();
     private boolean                    onlineMode     = false;
@@ -58,8 +57,8 @@ public class RecipeView {
         root.setBackground(SmartFridgeApp.BG_DARK);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        root.add(buildToolbar(),    BorderLayout.NORTH);
-        root.add(buildSplitArea(),  BorderLayout.CENTER);
+        root.add(buildToolbar(),   BorderLayout.NORTH);
+        root.add(buildSplitArea(), BorderLayout.CENTER);
         return root;
     }
 
@@ -72,10 +71,8 @@ public class RecipeView {
         bar.setOpaque(false);
         bar.setBorder(new EmptyBorder(0, 0, 12, 0));
 
-        // Left: action buttons
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
-
         JButton searchBtn  = UiHelper.accentButton("\uD83D\uDD0D  Suggest Recipes");
         JButton addListBtn = UiHelper.ghostButton("\uD83D\uDED2  Add Missing to Shopping List");
         searchBtn .addActionListener(e -> searchRecipes());
@@ -83,15 +80,23 @@ public class RecipeView {
         left.add(searchBtn);
         left.add(addListBtn);
 
-        // Right: online toggle + status
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
 
-        onlineToggle = buildOnlineToggle();
-        statusLabel  = new JLabel("\uD83D\uDFE1  Offline mode");
+        // Status: dot + text as separate labels to avoid emoji block
+        JPanel statusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        statusRow.setOpaque(false);
+        statusDot = new JLabel("\uD83D\uDFE1");
+        statusDot.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12));
+        statusDot.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+        statusLabel = new JLabel("Offline mode");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         statusLabel.setForeground(SmartFridgeApp.TEXT_SECONDARY);
-        right.add(statusLabel);
+        statusRow.add(statusDot);
+        statusRow.add(statusLabel);
+
+        onlineToggle = buildOnlineToggle();
+        right.add(statusRow);
         right.add(onlineToggle);
 
         bar.add(left,  BorderLayout.WEST);
@@ -110,9 +115,7 @@ public class RecipeView {
                         : SmartFridgeApp.BG_HOVER;
                 g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.setColor(isSelected()
-                        ? SmartFridgeApp.ACCENT
-                        : SmartFridgeApp.BORDER);
+                g2.setColor(isSelected() ? SmartFridgeApp.ACCENT : SmartFridgeApp.BORDER);
                 g2.setStroke(new BasicStroke(1.2f));
                 g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 20, 20);
                 g2.dispose();
@@ -134,26 +137,29 @@ public class RecipeView {
     private void toggleOnlineMode(boolean online) {
         onlineMode = online;
         if (online) {
-        	recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
-            statusLabel.setText("\uD83D\uDFE2  Online – Spoonacular API");
+            recipeService.setProvider(new SpoonacularRecipeProvider("33f9c011c2a14681b1bb71041e3f4081"));
+            statusDot.setText("\uD83D\uDFE2");
+            statusLabel.setText("Online \u2013 Spoonacular API");
             statusLabel.setForeground(SmartFridgeApp.ACCENT);
+            statusDot.setForeground(SmartFridgeApp.ACCENT);
             onlineToggle.setText("Online  \u2713");
         } else {
             recipeService.setProvider(new LocalRecipeProvider());
-            statusLabel.setText("\uD83D\uDFE1  Offline mode");
+            statusDot.setText("\uD83D\uDFE1");
+            statusLabel.setText("Offline mode");
             statusLabel.setForeground(SmartFridgeApp.TEXT_SECONDARY);
+            statusDot.setForeground(SmartFridgeApp.TEXT_SECONDARY);
             onlineToggle.setText("Online");
         }
         listModel.clear();
-        detailArea.setText("Provider switched. Click \"Suggest Recipes\" to search.");
+        detailArea.setText(htmlWrap("Provider switched. Click &ldquo;Suggest Recipes&rdquo; to search."));
     }
 
     // -------------------------------------------------------------------------
-    // Split area: recipe list (left) + detail panel (right)
+    // Split area
     // -------------------------------------------------------------------------
 
     private JSplitPane buildSplitArea() {
-        // --- Left: recipe card list ---
         listModel  = new DefaultListModel<>();
         recipeList = new JList<>(listModel);
         recipeList.setBackground(SmartFridgeApp.BG_DARK);
@@ -164,8 +170,7 @@ public class RecipeView {
         });
 
         JScrollPane listScroll = UiHelper.scrollPane(recipeList);
-        listScroll.setBorder(BorderFactory.createLineBorder(
-                SmartFridgeApp.BORDER, 1, true));
+        listScroll.setBorder(BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1, true));
 
         JPanel leftPanel = new JPanel(new BorderLayout(0, 8));
         leftPanel.setOpaque(false);
@@ -173,11 +178,9 @@ public class RecipeView {
         leftPanel.add(UiHelper.sectionLabel("\uD83D\uDCD6  Recipes"), BorderLayout.NORTH);
         leftPanel.add(listScroll, BorderLayout.CENTER);
 
-        // --- Right: detail panel ---
         JPanel rightPanel = buildDetailPanel();
 
-        JSplitPane split = new JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
         split.setDividerLocation(300);
         split.setDividerSize(6);
         split.setBackground(SmartFridgeApp.BG_DARK);
@@ -190,19 +193,18 @@ public class RecipeView {
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(0, 12, 0, 0));
 
-        detailArea = new JTextArea();
+        detailArea = new JEditorPane("text/html", htmlWrap(
+                "Click &ldquo;Suggest Recipes&rdquo; to find matching recipes "
+                + "for your current fridge contents."));
         detailArea.setEditable(false);
-        detailArea.setLineWrap(true);
-        detailArea.setWrapStyleWord(true);
+        detailArea.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
         detailArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         detailArea.setBackground(SmartFridgeApp.BG_CARD);
         detailArea.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         detailArea.setBorder(new EmptyBorder(16, 16, 16, 16));
-        detailArea.setText("Click \"Suggest Recipes\" to find matching recipes\nfor your current fridge contents.");
 
         JScrollPane detailScroll = UiHelper.scrollPane(detailArea);
-        detailScroll.setBorder(BorderFactory.createLineBorder(
-                SmartFridgeApp.BORDER, 1, true));
+        detailScroll.setBorder(BorderFactory.createLineBorder(SmartFridgeApp.BORDER, 1, true));
 
         panel.add(UiHelper.sectionLabel("\uD83D\uDCC4  Details"), BorderLayout.NORTH);
         panel.add(detailScroll, BorderLayout.CENTER);
@@ -214,11 +216,10 @@ public class RecipeView {
     // -------------------------------------------------------------------------
 
     private void searchRecipes() {
-        detailArea.setText("\uD83D\uDD04  Searching" +
-                (onlineMode ? " (Spoonacular API)" : " (local database)") + "...");
+        detailArea.setText(htmlWrap("Searching"
+                + (onlineMode ? " (Spoonacular API)" : " (local database)") + "..."));
         listModel.clear();
 
-        // Run in background so the UI does not freeze during API calls
         SwingWorker<List<Recipe>, Void> worker = new SwingWorker<>() {
             @Override protected List<Recipe> doInBackground() {
                 return recipeService.suggestRecipes(fridgeManager);
@@ -227,11 +228,11 @@ public class RecipeView {
                 try {
                     currentRecipes = get();
                     for (Recipe r : currentRecipes) listModel.addElement(r);
-                    detailArea.setText(currentRecipes.isEmpty()
+                    detailArea.setText(htmlWrap(currentRecipes.isEmpty()
                             ? "No matching recipes found. Try adding more products to your fridge."
-                            : "Select a recipe on the left to see details.");
+                            : "Select a recipe on the left to see details."));
                 } catch (Exception ex) {
-                    detailArea.setText("\u274C  Error while loading recipes:\n" + ex.getMessage());
+                    detailArea.setText(htmlWrap("&#10060; Error while loading recipes: " + ex.getMessage()));
                 }
             }
         };
@@ -243,25 +244,33 @@ public class RecipeView {
         if (idx < 0 || currentRecipes == null || idx >= currentRecipes.size()) return;
         Recipe r = currentRecipes.get(idx);
 
+        String accent  = colorHex(SmartFridgeApp.ACCENT);
+        String warn    = colorHex(SmartFridgeApp.ACCENT_WARN);
+        String muted   = colorHex(SmartFridgeApp.TEXT_SECONDARY);
+        String primary = colorHex(SmartFridgeApp.TEXT_PRIMARY);
+
         StringBuilder sb = new StringBuilder();
-        sb.append("\uD83C\uDF73  ").append(r.getName()).append("\n");
-        sb.append("\u23F1  ").append(r.getPreparationTime()).append("\n");
+        sb.append("<html><body style='font-family:Segoe UI,sans-serif;font-size:13px;padding:4px;color:")
+          .append(primary).append("'>")
+          .append("<p><span style='font-size:16px'>\uD83C\uDF73</span> <b style='font-size:15px;color:")
+          .append(accent).append("'>").append(esc(r.getName())).append("</b></p>")
+          .append("<p style='color:").append(muted).append("'>&#9200; ").append(esc(r.getPreparationTime()));
         if (r.getSource() != null && !r.getSource().isBlank())
-            sb.append("\uD83D\uDD17  ").append(r.getSource()).append("\n");
-        sb.append("\n");
+            sb.append("&nbsp;&nbsp;&#128279; ").append(esc(r.getSource()));
+        sb.append("</p>");
 
-        if (!r.getDescription().isBlank()) {
-            sb.append("Instructions:\n").append(r.getDescription()).append("\n\n");
-        }
+        if (!r.getDescription().isBlank())
+            sb.append("<p><b>Instructions:</b><br>").append(esc(r.getDescription())).append("</p>");
 
-        sb.append("Ingredients:\n");
+        sb.append("<p><b>Ingredients:</b></p><ul style='margin:4px 0 0 16px;padding:0'>")
+          .append("<style>li{margin-bottom:3px}</style>");
         for (String ingredient : r.getIngredients()) {
-        	boolean have = fridgeManager.containsIngredient(ingredient);
-            sb.append(have ? "  \u2705  " : "  \uD83D\uDED2  ")
-              .append(ingredient)
-              .append(have ? "" : "  (not in fridge)")
-              .append("\n");
+            boolean have = fridgeManager.containsIngredient(ingredient);
+            String icon  = have ? "&#9989;" : "&#128722;";
+            String hint  = have ? "" : " <span style='color:" + muted + "'>(not in fridge)</span>";
+            sb.append("<li>").append(icon).append(" ").append(esc(ingredient)).append(hint).append("</li>");
         }
+        sb.append("</ul></body></html>");
 
         detailArea.setText(sb.toString());
         detailArea.setCaretPosition(0);
@@ -313,27 +322,65 @@ public class RecipeView {
                             isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.BG_CARD),
                     new EmptyBorder(10, 14, 10, 14)));
 
-            JLabel name = new JLabel("\uD83C\uDF73  " + r.getName());
-            name.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            name.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
+            // Name row: emoji + text in separate labels
+            JPanel nameRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+            nameRow.setOpaque(false);
+            JLabel nameEmoji = new JLabel("\uD83C\uDF73");
+            nameEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+            nameEmoji.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
+            JLabel nameLbl = new JLabel(r.getName());
+            nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            nameLbl.setForeground(isSelected ? SmartFridgeApp.ACCENT : SmartFridgeApp.TEXT_PRIMARY);
+            nameRow.add(nameEmoji);
+            nameRow.add(nameLbl);
 
-            // Count how many ingredients are available
-            long have = r.getIngredients().stream()
-                    .filter(fridgeManager::containsIngredient).count();
+            // Ingredient ratio
+            long have  = r.getIngredients().stream().filter(fridgeManager::containsIngredient).count();
             int  total = r.getIngredients().size();
             String ratio = have + "/" + total + " ingredients";
             Color ratioColor = have == total ? SmartFridgeApp.ACCENT
                              : have > 0      ? SmartFridgeApp.ACCENT_WARN
                              : SmartFridgeApp.ACCENT_DANGER;
 
-            JLabel meta = new JLabel("\u23F1 " + r.getPreparationTime()
-                    + "   \uD83D\uDED2 " + ratio);
-            meta.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            meta.setForeground(ratioColor);
+            // Meta row: emoji + text in separate labels
+            JPanel metaRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+            metaRow.setOpaque(false);
+            JLabel timeEmoji = new JLabel("\u23F1");
+            timeEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 11));
+            timeEmoji.setForeground(ratioColor);
+            JLabel timeText = new JLabel(" " + r.getPreparationTime() + "   ");
+            timeText.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            timeText.setForeground(ratioColor);
+            JLabel cartEmoji = new JLabel("\uD83D\uDED2");
+            cartEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 11));
+            cartEmoji.setForeground(ratioColor);
+            JLabel ratioText = new JLabel(" " + ratio);
+            ratioText.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            ratioText.setForeground(ratioColor);
+            metaRow.add(timeEmoji);
+            metaRow.add(timeText);
+            metaRow.add(cartEmoji);
+            metaRow.add(ratioText);
 
-            card.add(name, BorderLayout.CENTER);
-            card.add(meta, BorderLayout.SOUTH);
+            card.add(nameRow, BorderLayout.CENTER);
+            card.add(metaRow, BorderLayout.SOUTH);
             return card;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private static String htmlWrap(String body) {
+        return "<html><body style='font-family:Segoe UI,sans-serif;font-size:13px;padding:4px'>" + body + "</body></html>";
+    }
+
+    private static String esc(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private static String colorHex(Color c) {
+        return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
     }
 }

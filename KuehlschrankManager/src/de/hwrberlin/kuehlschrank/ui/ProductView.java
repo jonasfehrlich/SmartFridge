@@ -26,7 +26,7 @@ public class ProductView {
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         model = new DefaultTableModel(
-                new Object[]{"Name", "Category", "Quantity", "Expiry", "Status"}, 0) {
+                new Object[]{"\uD83D\uDCE6  Name", "\uD83C\uDFF7  Category", "\uD83D\uDD22  Quantity", "\uD83D\uDCC5  Expiry", "\u2139  Status"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(model);
@@ -74,12 +74,19 @@ public class ProductView {
                     JTable tbl, Object val, boolean sel, boolean foc, int row, int col) {
                 super.getTableCellRendererComponent(tbl, val, sel, foc, row, col);
                 String s = val == null ? "" : val.toString();
+                String display = switch (s) {
+                    case "EXPIRED"        -> "\u274C  EXPIRED";
+                    case "Expiring soon"  -> "\u23F0  Expiring soon";
+                    case "Restock needed" -> "\uD83D\uDED2  Restock needed";
+                    default               -> "\u2705  OK";
+                };
+                setText(display);
                 setBackground(sel ? new Color(99, 179, 122, 50) : SmartFridgeApp.BG_CARD);
                 setForeground(switch (s) {
-                    case "EXPIRED"      -> SmartFridgeApp.ACCENT_DANGER;
-                    case "Expiring soon" -> SmartFridgeApp.ACCENT_WARN;
+                    case "EXPIRED"        -> SmartFridgeApp.ACCENT_DANGER;
+                    case "Expiring soon"  -> SmartFridgeApp.ACCENT_WARN;
                     case "Restock needed" -> SmartFridgeApp.ACCENT_BLUE;
-                    default              -> SmartFridgeApp.ACCENT;
+                    default               -> SmartFridgeApp.ACCENT;
                 });
                 setFont(new Font("Segoe UI", Font.BOLD, 12));
                 setBorder(new EmptyBorder(0, 10, 0, 10));
@@ -126,18 +133,18 @@ public class ProductView {
         catBox.setForeground(SmartFridgeApp.TEXT_PRIMARY);
         catBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        grid.add(styledLabel("Name"));              grid.add(nameField);
-        grid.add(styledLabel("Quantity"));           grid.add(quantityField);
-        grid.add(styledLabel("Unit"));              grid.add(unitField);
-        grid.add(styledLabel("Category"));          grid.add(catBox);
-        grid.add(styledLabel("Min. Quantity"));     grid.add(minField);
-        grid.add(styledLabel("Expiry (YYYY-MM-DD)")); grid.add(expiryField);
+        grid.add(styledLabel("\uD83D\uDCDD  Name"));                grid.add(nameField);
+        grid.add(styledLabel("\uD83D\uDD22  Quantity"));             grid.add(quantityField);
+        grid.add(styledLabel("\uD83D\uDCCF  Unit"));                grid.add(unitField);
+        grid.add(styledLabel("\uD83C\uDFF7  Category"));            grid.add(catBox);
+        grid.add(styledLabel("\u26A0  Min. Quantity"));             grid.add(minField);
+        grid.add(styledLabel("\uD83D\uDCC5  Expiry (YYYY-MM-DD)")); grid.add(expiryField);
 
         card.add(grid, BorderLayout.CENTER);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         btnRow.setOpaque(false);
-        JButton addBtn = UiHelper.accentButton("+ Add / Update");
+        JButton addBtn = UiHelper.accentButton("\u2795  Add / Update");
         JButton delBtn = UiHelper.dangerButton("\uD83D\uDDD1  Delete selected");
 
         addBtn.addActionListener(e -> {
